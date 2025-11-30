@@ -31,4 +31,39 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Browsershot Configuration - IsoGUI Screen
+    |--------------------------------------------------------------------------
+    |
+    | Configuración para la captura de pantalla con Browsershot.
+    | Usado para renderizado avanzado de mockups con HTML/CSS.
+    |
+    */
+
+    'browsershot' => [
+        'node_binary' => env('NODE_BINARY', '/usr/bin/node'),
+        'npm_binary' => env('NPM_BINARY', '/usr/bin/npm'),
+        'chrome_path' => env('CHROME_PATH', null),
+        'timeout' => env('BROWSERSHOT_TIMEOUT', 60),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI Service Configuration - IsoGUI Screen
+    |--------------------------------------------------------------------------
+    |
+    | Configuración del servicio de IA para generación de textos de marketing.
+    | Compatible con OpenAI y servicios compatibles con su API.
+    |
+    */
+
+    'ai' => [
+        'api_key' => env('AI_API_KEY', ''),
+        'endpoint' => env('AI_ENDPOINT', 'https://api.openai.com/v1/chat/completions'),
+        'model' => env('AI_MODEL', 'gpt-3.5-turbo'),
+        'max_tokens' => env('AI_MAX_TOKENS', 1500),
+        'temperature' => env('AI_TEMPERATURE', 0.8),
+    ],
+
 ];

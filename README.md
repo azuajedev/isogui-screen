@@ -1,66 +1,203 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# IsoGUI Screen
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11">
+  <img src="https://img.shields.io/badge/Vue.js-3-4FC08D?style=for-the-badge&logo=vue.js&logoColor=white" alt="Vue 3">
+  <img src="https://img.shields.io/badge/PHP-8.2+-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.2+">
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="MIT License">
 </p>
 
-## About Laravel
+## 📱 Descripción
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+**IsoGUI Screen** es una aplicación SaaS para crear mockups profesionales de screenshots de aplicaciones móviles. Diseñada para desarrolladores, diseñadores y equipos de marketing que necesitan generar imágenes atractivas para App Store y Google Play.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### ✨ Características Principales
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- 🎨 **Editor Visual Interactivo** - Diseña mockups con arrastrar y soltar
+- 📐 **Templates Profesionales** - Plantillas pre-diseñadas para App Store y Play Store
+- 🌍 **Multi-idioma** - Genera mockups en múltiples idiomas
+- 🤖 **Generación con IA** - Textos de marketing generados automáticamente
+- 📦 **Exportación Múltiple** - PNG, JPEG, WebP
+- 👥 **Sistema de Planes** - Free, Pro y Enterprise
 
-## Learning Laravel
+## 🚀 Instalación Rápida
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```bash
+# Clonar repositorio
+git clone https://github.com/azuajedev/isogui-screen.git
+cd isogui-screen
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+# Instalar dependencias
+composer install
+npm install
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Configurar entorno
+cp .env.example .env
+php artisan key:generate
 
-## Laravel Sponsors
+# Crear base de datos y ejecutar migraciones
+php artisan migrate --seed
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# Compilar assets
+npm run dev
 
-### Premium Partners
+# Iniciar servidor
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+> 📖 Para instrucciones detalladas, consulta [INSTALLATION.md](INSTALLATION.md)
 
-## Contributing
+## 📋 Requisitos
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- PHP >= 8.2
+- Composer >= 2.0
+- Node.js >= 18
+- npm >= 9
+- SQLite, MySQL o PostgreSQL
 
-## Code of Conduct
+## 🏗️ Arquitectura
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```
+app/
+├── Http/Controllers/
+│   ├── DashboardController.php    # Dashboard y estadísticas
+│   ├── ProjectController.php      # CRUD de proyectos
+│   ├── ScreenshotController.php   # Gestión de screenshots
+│   ├── TemplateController.php     # Listado de templates
+│   ├── RenderController.php       # Renderizado de mockups
+│   └── MarketingCopyController.php # Generación de textos con IA
+├── Models/
+│   ├── User.php                   # Usuario con roles y planes
+│   ├── Project.php                # Proyectos del usuario
+│   ├── Screenshot.php             # Screenshots subidos
+│   ├── Template.php               # Templates de mockups
+│   └── RenderedImage.php          # Imágenes generadas
+├── Services/
+│   ├── MockupRenderService.php    # Motor de renderizado
+│   └── MarketingCopyService.php   # Integración con IA
+└── Policies/
+    ├── ProjectPolicy.php          # Autorización de proyectos
+    └── TemplatePolicy.php         # Autorización de templates
+```
 
-## Security Vulnerabilities
+## 🔌 API Endpoints
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Autenticación Requerida
 
-## License
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/dashboard/stats` | Estadísticas del usuario |
+| GET | `/api/projects` | Listar proyectos |
+| POST | `/api/projects` | Crear proyecto |
+| GET | `/api/projects/{id}` | Ver proyecto |
+| PUT | `/api/projects/{id}` | Actualizar proyecto |
+| DELETE | `/api/projects/{id}` | Eliminar proyecto |
+| POST | `/api/projects/{id}/screenshots` | Subir screenshots |
+| GET | `/api/templates` | Listar templates |
+| POST | `/api/render` | Renderizar mockup |
+| POST | `/api/marketing/generate` | Generar textos con IA |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📊 Modelos de Datos
+
+### User
+- `role`: enum('user', 'admin')
+- `plan`: string('free', 'pro', 'enterprise')
+- `plan_expires_at`: timestamp
+
+### Project
+- `user_id`: foreign key
+- `name`: string
+- `description`: text
+- `app_type`: string
+
+### Screenshot
+- `project_id`: foreign key
+- `original_filename`: string
+- `stored_path`: string
+- `orientation`: enum('horizontal', 'vertical')
+- `width`, `height`: integer
+- `file_size`: integer
+
+### Template
+- `name`, `slug`: string
+- `type`: string (app-store, play-store)
+- `orientation`: enum('horizontal', 'vertical', 'both')
+- `layout_config`: json
+- `is_premium`, `is_active`: boolean
+
+### RenderedImage
+- `screenshot_id`, `template_id`: foreign keys
+- `language`: string
+- `texts`: json
+- `output_path`: string
+- `output_format`: string
+
+## 🎨 Frontend
+
+El frontend está construido con **Vue 3** y **Composition API**:
+
+- `MockupEditor.vue` - Editor principal con paneles laterales
+- `MockupCanvas.vue` - Canvas de renderizado con controles de zoom
+
+### Compilar para Producción
+
+```bash
+npm run build
+```
+
+## 🧪 Testing
+
+```bash
+# Tests PHP
+php artisan test
+
+# Tests con cobertura
+php artisan test --coverage
+```
+
+## 📝 Planes y Límites
+
+| Característica | Free | Pro | Enterprise |
+|----------------|------|-----|------------|
+| Proyectos | 3 | 20 | Ilimitados |
+| Templates Premium | ❌ | ✅ | ✅ |
+| Generación IA | ❌ | ✅ | ✅ |
+| Traducción | ❌ | ✅ | ✅ |
+
+## 🔧 Configuración
+
+### Variables de Entorno
+
+```env
+# IA (OpenAI o compatible)
+AI_API_KEY=sk-your-api-key
+AI_ENDPOINT=https://api.openai.com/v1/chat/completions
+AI_MODEL=gpt-3.5-turbo
+
+# Browsershot (opcional, para renderizado avanzado)
+NODE_BINARY=/usr/bin/node
+NPM_BINARY=/usr/bin/npm
+CHROME_PATH=/usr/bin/google-chrome
+```
+
+## 🤝 Contribuir
+
+1. Fork el repositorio
+2. Crea una rama (`git checkout -b feature/nueva-caracteristica`)
+3. Commit tus cambios (`git commit -am 'Añadir nueva característica'`)
+4. Push a la rama (`git push origin feature/nueva-caracteristica`)
+5. Abre un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+
+## 👨‍💻 Autor
+
+Desarrollado por [@azuajedev](https://github.com/azuajedev)
+
+---
+
+<p align="center">
+  Hecho con ❤️ usando Laravel 11 y Vue 3
+</p>
