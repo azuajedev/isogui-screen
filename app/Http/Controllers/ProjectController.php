@@ -34,7 +34,7 @@ class ProjectController extends Controller
         $user = $request->user();
 
         // Verificar límite de proyectos
-        if (!$user->canCreateProject()) {
+        if (! $user->canCreateProject()) {
             return response()->json([
                 'message' => 'Has alcanzado el límite de proyectos para tu plan.',
                 'upgrade_required' => true,

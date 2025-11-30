@@ -382,6 +382,13 @@ export default {
       fileInput.value?.click();
     };
 
+    // Liberar URLs de blob cuando se elimina un screenshot
+    const revokeScreenshotUrl = (screenshot) => {
+      if (screenshot.url && screenshot.url.startsWith('blob:')) {
+        URL.revokeObjectURL(screenshot.url);
+      }
+    };
+
     const handleFileSelect = async (event) => {
       const files = event.target.files;
       if (!files.length) return;
@@ -409,6 +416,11 @@ export default {
               selectedScreenshot.value = screenshot;
             }
 
+            resolve();
+          };
+          img.onerror = () => {
+            // Liberar URL si hay error
+            URL.revokeObjectURL(url);
             resolve();
           };
         });

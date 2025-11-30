@@ -59,8 +59,17 @@ class ScreenshotController extends Controller
             // Detectar orientación
             $orientation = Screenshot::detectOrientation($width, $height);
 
+            // Determinar extensión basada en el tipo de imagen real (no en la extensión del archivo)
+            $mimeTypeToExtension = [
+                IMAGETYPE_JPEG => 'jpg',
+                IMAGETYPE_PNG => 'png',
+                IMAGETYPE_WEBP => 'webp',
+            ];
+            $imageType = $imageInfo[2] ?? null;
+            $extension = $mimeTypeToExtension[$imageType] ?? 'png';
+
             // Generar nombre único y guardar
-            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            $filename = Str::uuid().'.'.$extension;
             $path = $file->storeAs("screenshots/{$project->id}", $filename, 'public');
 
             // Crear registro en base de datos
@@ -77,7 +86,7 @@ class ScreenshotController extends Controller
         }
 
         return response()->json([
-            'message' => count($uploaded) . ' screenshot(s) subido(s) exitosamente.',
+            'message' => count($uploaded).' screenshot(s) subido(s) exitosamente.',
             'screenshots' => $uploaded,
         ], 201);
     }

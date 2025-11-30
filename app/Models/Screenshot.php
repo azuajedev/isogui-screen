@@ -95,6 +95,6 @@ class Screenshot extends Model
         $units = ['B', 'KB', 'MB', 'GB'];
         $power = $bytes > 0 ? floor(log($bytes, 1024)) : 0;
 
-        return number_format($bytes / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
+        return number_format($bytes / pow(1024, $power), 2, '.', ',').' '.$units[$power];
     }
 }

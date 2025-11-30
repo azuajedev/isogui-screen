@@ -28,7 +28,7 @@ class TemplatePolicy
     public function view(User $user, Template $template): bool
     {
         // Si el template no está activo, solo admins pueden verlo
-        if (!$template->is_active) {
+        if (! $template->is_active) {
             return $user->isAdmin();
         }
 
@@ -41,7 +41,7 @@ class TemplatePolicy
     public function use(User $user, Template $template): bool
     {
         // Template debe estar activo
-        if (!$template->is_active) {
+        if (! $template->is_active) {
             return false;
         }
 

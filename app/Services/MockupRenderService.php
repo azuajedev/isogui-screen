@@ -16,11 +16,11 @@ class MockupRenderService
     /**
      * Renderiza un mockup completo
      *
-     * @param Screenshot $screenshot El screenshot a usar
-     * @param Template $template El template a aplicar
-     * @param array $texts Los textos a superponer
-     * @param string $language El idioma de los textos
-     * @param string $format El formato de salida (png, jpeg, webp)
+     * @param  Screenshot  $screenshot  El screenshot a usar
+     * @param  Template  $template  El template a aplicar
+     * @param  array  $texts  Los textos a superponer
+     * @param  string  $language  El idioma de los textos
+     * @param  string  $format  El formato de salida (png, jpeg, webp)
      * @return array Información del archivo generado
      */
     public function render(
@@ -69,13 +69,13 @@ class MockupRenderService
         }
 
         // Guardar imagen
-        $filename = Str::uuid() . '.' . $format;
-        $path = "renders/{$screenshot->project_id}/" . $filename;
+        $filename = Str::uuid().'.'.$format;
+        $path = "renders/{$screenshot->project_id}/".$filename;
         $fullPath = Storage::disk('public')->path($path);
 
         // Asegurar que el directorio existe
         $directory = dirname($fullPath);
-        if (!is_dir($directory)) {
+        if (! is_dir($directory)) {
             mkdir($directory, 0755, true);
         }
 
@@ -144,7 +144,7 @@ class MockupRenderService
         $imageData = ob_get_clean();
         imagedestroy($canvas);
 
-        return 'data:image/png;base64,' . base64_encode($imageData);
+        return 'data:image/png;base64,'.base64_encode($imageData);
     }
 
     /**
@@ -152,12 +152,12 @@ class MockupRenderService
      */
     protected function loadImage(string $path)
     {
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return null;
         }
 
         $info = getimagesize($path);
-        if (!$info) {
+        if (! $info) {
             return null;
         }
 
@@ -213,13 +213,27 @@ class MockupRenderService
      */
     protected function renderTexts($canvas, array $texts, array $config): void
     {
-        $fontPath = resource_path('fonts/Inter-Regular.ttf');
+        // Buscar fuente en múltiples ubicaciones
+        $fontPaths = [
+            resource_path('fonts/Inter-Regular.ttf'),
+            resource_path('fonts/inter.ttf'),
+            '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+            '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf',
+        ];
 
-        // Si no existe la fuente, usar una por defecto
-        if (!file_exists($fontPath)) {
+        $fontPath = null;
+        foreach ($fontPaths as $path) {
+            if (file_exists($path)) {
+                $fontPath = $path;
+                break;
+            }
+        }
+
+        // Si no existe ninguna fuente TTF, usar renderizado básico de GD
+        if ($fontPath === null) {
             // Renderizar con texto básico de GD
             foreach ($texts as $key => $text) {
-                if (empty($text) || !isset($config[$key])) {
+                if (empty($text) || ! isset($config[$key])) {
                     continue;
                 }
 
@@ -232,11 +246,12 @@ class MockupRenderService
 
                 imagestring($canvas, 5, (int) $x, (int) $y, $text, $textColor);
             }
+
             return;
         }
 
         foreach ($texts as $key => $text) {
-            if (empty($text) || !isset($config[$key])) {
+            if (empty($text) || ! isset($config[$key])) {
                 continue;
             }
 
@@ -317,11 +332,69 @@ class MockupRenderService
     }
 
     /**
-     * Aplica bordes redondeados (simplificado)
+     * Aplica bordes redondeados usando máscara
+     * Nota: GD no soporta bordes redondeados nativamente, esta es una implementación básica
      */
     protected function applyBorderRadius($canvas, int $x, int $y, int $width, int $height, int $radius): void
     {
-        // Implementación simplificada - en producción usar librería de imágenes más avanzada
+        // Limitar el radio al máximo permitido
+        $radius = min($radius, min($width, $height) / 2);
+
+        if ($radius <= 0) {
+            return;
+        }
+
+        // Color de fondo para las esquinas (transparente si el canvas soporta alpha)
+        $bgColor = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
+
+        // Redondear las 4 esquinas
+        // Esquina superior izquierda
+        $this->roundCorner($canvas, $x, $y, $radius, $bgColor, 1);
+        // Esquina superior derecha
+        $this->roundCorner($canvas, $x + $width - $radius, $y, $radius, $bgColor, 2);
+        // Esquina inferior derecha
+        $this->roundCorner($canvas, $x + $width - $radius, $y + $height - $radius, $radius, $bgColor, 3);
+        // Esquina inferior izquierda
+        $this->roundCorner($canvas, $x, $y + $height - $radius, $radius, $bgColor, 4);
+    }
+
+    /**
+     * Redondea una esquina específica
+     */
+    protected function roundCorner($canvas, int $x, int $y, int $radius, $bgColor, int $corner): void
+    {
+        // Crear un rectángulo con la esquina transparente
+        for ($i = 0; $i < $radius; $i++) {
+            for ($j = 0; $j < $radius; $j++) {
+                $distance = sqrt(pow($radius - $i, 2) + pow($radius - $j, 2));
+
+                if ($distance > $radius) {
+                    $px = $x;
+                    $py = $y;
+
+                    switch ($corner) {
+                        case 1: // Superior izquierda
+                            $px = $x + $i;
+                            $py = $y + $j;
+                            break;
+                        case 2: // Superior derecha
+                            $px = $x + $radius - 1 - $i;
+                            $py = $y + $j;
+                            break;
+                        case 3: // Inferior derecha
+                            $px = $x + $radius - 1 - $i;
+                            $py = $y + $radius - 1 - $j;
+                            break;
+                        case 4: // Inferior izquierda
+                            $px = $x + $i;
+                            $py = $y + $radius - 1 - $j;
+                            break;
+                    }
+
+                    imagesetpixel($canvas, $px, $py, $bgColor);
+                }
+            }
+        }
     }
 
     /**
@@ -350,7 +423,7 @@ class MockupRenderService
         $hex = ltrim($hex, '#');
 
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
 
         return [
@@ -390,7 +463,7 @@ class MockupRenderService
         $currentLine = '';
 
         foreach ($words as $word) {
-            $testLine = $currentLine . ($currentLine ? ' ' : '') . $word;
+            $testLine = $currentLine.($currentLine ? ' ' : '').$word;
             $box = imagettfbbox($fontSize, 0, $fontPath, $testLine);
             $lineWidth = abs($box[2] - $box[0]);
 

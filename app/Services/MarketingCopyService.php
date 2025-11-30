@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Http;
 class MarketingCopyService
 {
     protected string $apiKey;
+
     protected string $apiEndpoint;
+
     protected string $model;
 
     public function __construct()
@@ -24,13 +26,13 @@ class MarketingCopyService
     /**
      * Genera textos de marketing para App Store/Play Store
      *
-     * @param string $appName Nombre de la aplicación
-     * @param string $description Descripción de la aplicación
-     * @param string|null $targetAudience Audiencia objetivo
-     * @param array $keyFeatures Características principales
-     * @param string $language Idioma de salida
-     * @param string $tone Tono del texto
-     * @param int $variations Número de variaciones a generar
+     * @param  string  $appName  Nombre de la aplicación
+     * @param  string  $description  Descripción de la aplicación
+     * @param  string|null  $targetAudience  Audiencia objetivo
+     * @param  array  $keyFeatures  Características principales
+     * @param  string  $language  Idioma de salida
+     * @param  string  $tone  Tono del texto
+     * @param  int  $variations  Número de variaciones a generar
      * @return array Array de variaciones de textos
      */
     public function generate(
@@ -97,6 +99,7 @@ class MarketingCopyService
 
             if ($response->successful()) {
                 $content = $response->json('choices.0.message.content');
+
                 return $this->parseGeneratedCopies($content, $variations);
             }
 
@@ -110,8 +113,8 @@ class MarketingCopyService
     /**
      * Traduce textos a otro idioma
      *
-     * @param array $texts Textos a traducir
-     * @param string $targetLanguage Idioma objetivo
+     * @param  array  $texts  Textos a traducir
+     * @param  string  $targetLanguage  Idioma objetivo
      * @return array Textos traducidos
      */
     public function translate(array $texts, string $targetLanguage): array
@@ -131,9 +134,9 @@ class MarketingCopyService
         $langName = $languageNames[$targetLanguage] ?? $targetLanguage;
 
         $prompt = "Traduce los siguientes textos de marketing a {$langName}. "
-            . "Mantén el tono persuasivo y adapta las expresiones culturalmente. "
-            . "Responde SOLO con el JSON traducido, sin explicaciones.\n\n"
-            . "Textos:\n" . json_encode($texts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            .'Mantén el tono persuasivo y adapta las expresiones culturalmente. '
+            ."Responde SOLO con el JSON traducido, sin explicaciones.\n\n"
+            ."Textos:\n".json_encode($texts, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
         if (empty($this->apiKey)) {
             // Retornar los mismos textos si no hay API key
@@ -186,8 +189,8 @@ class MarketingCopyService
         string $tone,
         int $variations
     ): string {
-        $featuresText = !empty($keyFeatures)
-            ? "Características principales:\n- " . implode("\n- ", $keyFeatures)
+        $featuresText = ! empty($keyFeatures)
+            ? "Características principales:\n- ".implode("\n- ", $keyFeatures)
             : '';
 
         $audienceText = $targetAudience
@@ -228,14 +231,36 @@ PROMPT;
      */
     protected function parseGeneratedCopies(string $content, int $variations): array
     {
-        // Extraer JSON de la respuesta
-        preg_match('/\{[\s\S]*\}/', $content, $matches);
-
-        if (empty($matches[0])) {
+        // Intentar encontrar JSON balanceado con la estructura esperada
+        // Buscar el primer '{' y el último '}' que corresponda
+        $startPos = strpos($content, '{');
+        if ($startPos === false) {
             return $this->generatePlaceholder('App', $variations);
         }
 
-        $data = json_decode($matches[0], true);
+        // Encontrar el cierre correspondiente
+        $depth = 0;
+        $endPos = $startPos;
+        $len = strlen($content);
+
+        for ($i = $startPos; $i < $len; $i++) {
+            if ($content[$i] === '{') {
+                $depth++;
+            } elseif ($content[$i] === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    $endPos = $i;
+                    break;
+                }
+            }
+        }
+
+        $jsonString = substr($content, $startPos, $endPos - $startPos + 1);
+        $data = json_decode($jsonString, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->generatePlaceholder('App', $variations);
+        }
 
         if (isset($data['variations']) && is_array($data['variations'])) {
             return $data['variations'];
@@ -261,17 +286,17 @@ PROMPT;
                 'cta' => 'Prueba gratis',
             ],
             [
-                'headline' => "Potencia tu productividad",
+                'headline' => 'Potencia tu productividad',
                 'subheadline' => "{$appName} te ayuda a lograr más",
                 'cta' => 'Descargar',
             ],
             [
-                'headline' => "Nuevo. Intuitivo. Potente.",
+                'headline' => 'Nuevo. Intuitivo. Potente.',
                 'subheadline' => "Conoce el poder de {$appName}",
                 'cta' => 'Ver más',
             ],
             [
-                'headline' => "Tu nueva app favorita",
+                'headline' => 'Tu nueva app favorita',
                 'subheadline' => "{$appName} revoluciona tu día a día",
                 'cta' => 'Únete ahora',
             ],

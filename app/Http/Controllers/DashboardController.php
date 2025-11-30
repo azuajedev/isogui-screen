@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\Template;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -44,7 +43,7 @@ class DashboardController extends Controller
 
         // Templates disponibles
         $templates = Template::active()
-            ->when(!$user->isPremium(), function ($query) {
+            ->when(! $user->isPremium(), function ($query) {
                 $query->free();
             })
             ->orderBy('sort_order')

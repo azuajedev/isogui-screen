@@ -90,9 +90,19 @@ export default {
     const loadImage = (url) => {
       return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        // Solo usar crossOrigin para URLs externas
+        if (url && !url.startsWith('blob:') && !url.startsWith('data:')) {
+          img.crossOrigin = 'anonymous';
+        }
         img.onload = () => resolve(img);
-        img.onerror = reject;
+        img.onerror = (e) => {
+          console.warn('Error cargando imagen, intentando sin CORS:', url);
+          // Reintentar sin crossOrigin si falla
+          const retryImg = new Image();
+          retryImg.onload = () => resolve(retryImg);
+          retryImg.onerror = reject;
+          retryImg.src = url;
+        };
         img.src = url;
       });
     };
@@ -182,14 +192,29 @@ export default {
           if (cfg.background) {
             ctx.fillStyle = cfg.background;
             const padding = cfg.padding || 20;
+            const radius = cfg.border_radius || 8;
+            const x = cfg.x - padding;
+            const y = cfg.y - cfg.size - padding / 2;
+            const width = ctx.measureText(props.texts.cta).width + padding * 2;
+            const height = cfg.size + padding;
+
+            // Polyfill para roundRect en navegadores antiguos
             ctx.beginPath();
-            ctx.roundRect(
-              cfg.x - padding,
-              cfg.y - cfg.size - padding / 2,
-              ctx.measureText(props.texts.cta).width + padding * 2,
-              cfg.size + padding,
-              cfg.border_radius || 8
-            );
+            if (ctx.roundRect) {
+              ctx.roundRect(x, y, width, height, radius);
+            } else {
+              // Fallback manual para navegadores sin soporte
+              ctx.moveTo(x + radius, y);
+              ctx.lineTo(x + width - radius, y);
+              ctx.arcTo(x + width, y, x + width, y + radius, radius);
+              ctx.lineTo(x + width, y + height - radius);
+              ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
+              ctx.lineTo(x + radius, y + height);
+              ctx.arcTo(x, y + height, x, y + height - radius, radius);
+              ctx.lineTo(x, y + radius);
+              ctx.arcTo(x, y, x + radius, y, radius);
+              ctx.closePath();
+            }
             ctx.fill();
           }
 

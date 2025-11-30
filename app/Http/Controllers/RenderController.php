@@ -49,7 +49,7 @@ class RenderController extends Controller
         }
 
         // Verificar que el template es accesible para el usuario
-        if ($template->is_premium && !$user->isPremium()) {
+        if ($template->is_premium && ! $user->isPremium()) {
             return response()->json([
                 'message' => 'Este template requiere un plan premium.',
                 'upgrade_required' => true,
@@ -57,7 +57,7 @@ class RenderController extends Controller
         }
 
         // Verificar compatibilidad de orientación
-        if (!$template->supportsOrientation($screenshot->orientation)) {
+        if (! $template->supportsOrientation($screenshot->orientation)) {
             return response()->json([
                 'message' => 'El template no es compatible con la orientación del screenshot.',
             ], 400);
@@ -168,11 +168,11 @@ class RenderController extends Controller
 
         $path = Storage::disk('public')->path($renderedImage->output_path);
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             return response()->json(['message' => 'Archivo no encontrado.'], 404);
         }
 
-        $filename = 'mockup-' . $renderedImage->id . '.' . $renderedImage->output_format;
+        $filename = 'mockup-'.$renderedImage->id.'.'.$renderedImage->output_format;
 
         return response()->download($path, $filename);
     }

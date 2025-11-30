@@ -37,7 +37,7 @@ class MarketingCopyController extends Controller
 
         // Verificar si el usuario tiene acceso a la funcionalidad de IA
         $user = $request->user();
-        if (!$user->isPremium()) {
+        if (! $user->isPremium()) {
             return response()->json([
                 'message' => 'La generación de textos con IA requiere un plan premium.',
                 'upgrade_required' => true,
@@ -81,7 +81,7 @@ class MarketingCopyController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user->isPremium()) {
+        if (! $user->isPremium()) {
             return response()->json([
                 'message' => 'La traducción requiere un plan premium.',
                 'upgrade_required' => true,

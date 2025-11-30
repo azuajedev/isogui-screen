@@ -31,7 +31,8 @@ class TemplateController extends Controller
             ->get()
             ->map(function ($template) use ($user) {
                 // Marcar si el usuario puede usar este template
-                $template->can_use = !$template->is_premium || $user->isPremium();
+                $template->can_use = ! $template->is_premium || $user->isPremium();
+
                 return $template;
             });
 
@@ -43,7 +44,7 @@ class TemplateController extends Controller
      */
     public function show(Template $template): JsonResponse
     {
-        if (!$template->is_active) {
+        if (! $template->is_active) {
             return response()->json(['message' => 'Template no disponible.'], 404);
         }
 
@@ -70,7 +71,7 @@ class TemplateController extends Controller
     {
         $user = $request->user();
 
-        if (!in_array($orientation, ['horizontal', 'vertical'])) {
+        if (! in_array($orientation, ['horizontal', 'vertical'])) {
             return response()->json(['message' => 'Orientación no válida.'], 400);
         }
 
@@ -79,7 +80,8 @@ class TemplateController extends Controller
             ->orderBy('sort_order')
             ->get()
             ->map(function ($template) use ($user) {
-                $template->can_use = !$template->is_premium || $user->isPremium();
+                $template->can_use = ! $template->is_premium || $user->isPremium();
+
                 return $template;
             });
 

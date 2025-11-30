@@ -102,7 +102,7 @@ class Template extends Model
     {
         return $query->where(function ($q) use ($orientation) {
             $q->where('orientation', $orientation)
-              ->orWhere('orientation', 'both');
+                ->orWhere('orientation', 'both');
         });
     }
 

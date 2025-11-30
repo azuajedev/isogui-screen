@@ -284,8 +284,16 @@ class TemplateSeeder extends Seeder
             ],
         ];
 
-        foreach ($templates as $templateData) {
-            Template::create($templateData);
-        }
+        // Usar inserción en lote para mejor rendimiento
+        $now = now();
+        $templatesForInsert = array_map(function ($templateData) use ($now) {
+            return array_merge($templateData, [
+                'layout_config' => json_encode($templateData['layout_config']),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }, $templates);
+
+        Template::insert($templatesForInsert);
     }
 }
