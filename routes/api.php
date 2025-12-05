@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DesignController;
+use App\Http\Controllers\DesignImageController;
 use App\Http\Controllers\MarketingCopyController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RenderController;
@@ -11,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| API Routes - IsoGUI Screen
+| API Routes - Idogui Screen
 |--------------------------------------------------------------------------
 |
 | Rutas API para la aplicación de generación de mockups.
@@ -22,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 // Ruta de verificación de autenticación
 Route::get('/user', function (Request $request) {
     return $request->user();
-})->middleware('auth:sanctum');
+})->middleware('auth:web');
 
 // Rutas públicas
 Route::prefix('public')->group(function () {
@@ -34,12 +36,40 @@ Route::prefix('public')->group(function () {
 });
 
 // Rutas protegidas (requieren autenticación)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware('auth:web')->group(function () {
     // Dashboard
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
     // Proyectos (CRUD completo)
     Route::apiResource('projects', ProjectController::class);
+
+    // Diseños (sistema de guardado de mockups)
+    Route::prefix('designs')->group(function () {
+        Route::get('/', [DesignController::class, 'index']);
+        Route::post('/', [DesignController::class, 'store']);
+        Route::get('/{id}', [DesignController::class, 'show']);
+        Route::put('/{id}', [DesignController::class, 'update']);
+        Route::delete('/{id}', [DesignController::class, 'destroy']);
+        Route::post('/{id}/duplicate', [DesignController::class, 'duplicate']);
+        
+        // Páginas de diseño
+        Route::prefix('{design}/pages')->group(function () {
+            Route::get('/', [\App\Http\Controllers\DesignPageController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\DesignPageController::class, 'store']);
+            Route::get('/{page}', [\App\Http\Controllers\DesignPageController::class, 'show']);
+            Route::put('/{page}', [\App\Http\Controllers\DesignPageController::class, 'update']);
+            Route::delete('/{page}', [\App\Http\Controllers\DesignPageController::class, 'destroy']);
+            Route::post('/{page}/duplicate', [\App\Http\Controllers\DesignPageController::class, 'duplicate']);
+            Route::put('/{page}/reorder', [\App\Http\Controllers\DesignPageController::class, 'reorder']);
+        });
+        
+        // Imágenes de diseño (almacenamiento privado)
+        Route::prefix('{design}/images')->group(function () {
+            Route::post('/', [DesignImageController::class, 'store']);
+            Route::get('/{filename}', [DesignImageController::class, 'show'])->name('api.designs.images.show');
+            Route::delete('/{filename}', [DesignImageController::class, 'destroy']);
+        });
+    });
 
     // Screenshots (anidados en proyectos)
     Route::prefix('projects/{project}')->group(function () {

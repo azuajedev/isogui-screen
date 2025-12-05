@@ -1,6 +1,6 @@
-# Guía de Instalación - IsoGUI Screen
+# Guía de Instalación - Idogui Screen
 
-Esta guía te ayudará a configurar IsoGUI Screen en tu entorno de desarrollo local.
+Esta guía te ayudará a configurar Idogui Screen en tu entorno de desarrollo local.
 
 ## 📋 Requisitos Previos
 

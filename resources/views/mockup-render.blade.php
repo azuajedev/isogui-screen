@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'IsoGUI Screen') }} - Editor de Mockups</title>
+    <title>{{ config('app.name', 'Idogui Screen') }} - Editor de Mockups</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -86,7 +86,7 @@
 
     <!-- Datos iniciales para Vue -->
     <script>
-        window.IsoGUI = {
+        window.Idogui = {
             user: @json(auth()->user() ?? null),
             csrfToken: '{{ csrf_token() }}',
             apiUrl: '{{ url('/api') }}',

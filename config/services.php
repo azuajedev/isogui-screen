@@ -33,7 +33,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Browsershot Configuration - IsoGUI Screen
+    | Browsershot Configuration - Idogui Screen
     |--------------------------------------------------------------------------
     |
     | Configuración para la captura de pantalla con Browsershot.
@@ -50,7 +50,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | AI Service Configuration - IsoGUI Screen
+    | AI Service Configuration - Idogui Screen
     |--------------------------------------------------------------------------
     |
     | Configuración del servicio de IA para generación de textos de marketing.

@@ -42,5 +42,10 @@ class AppServiceProvider extends ServiceProvider
         foreach ($this->policies as $model => $policy) {
             Gate::policy($model, $policy);
         }
+
+        // Configurar redirección después del login
+        $this->app->bind('path.home', function () {
+            return '/dashboard';
+        });
     }
 }

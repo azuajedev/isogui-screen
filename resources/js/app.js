@@ -1,5 +1,5 @@
 /**
- * IsoGUI Screen - Aplicación Vue 3
+ * Idogui Screen - Aplicación Vue 3
  * 
  * Punto de entrada principal para la aplicación de frontend.
  * Configura Vue 3 con Composition API y componentes globales.
@@ -17,18 +17,18 @@ const app = createApp({
     },
     data() {
         return {
-            user: window.IsoGUI?.user || null,
+            user: window.Idogui?.user || null,
             isLoading: false,
         };
     },
     mounted() {
-        console.log('IsoGUI Screen inicializado');
+        console.log('Idogui Screen inicializado');
     },
 });
 
 // Configuración global
-app.config.globalProperties.$api = window.IsoGUI?.apiUrl || '/api';
-app.config.globalProperties.$storage = window.IsoGUI?.storageUrl || '/storage';
+app.config.globalProperties.$api = window.Idogui?.apiUrl || '/api';
+app.config.globalProperties.$storage = window.Idogui?.storageUrl || '/storage';
 
 // Montar aplicación
 app.mount('#app');

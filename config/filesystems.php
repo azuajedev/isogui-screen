@@ -43,6 +43,13 @@ return [
             'visibility' => 'public',
             'throw' => false,
         ],
+        
+        'designs' => [
+            'driver' => 'local',
+            'root' => storage_path('app/'.env('STORAGE_DESIGNS_PATH', 'designs')),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
 
         's3' => [
             'driver' => 's3',

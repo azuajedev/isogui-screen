@@ -1,4 +1,4 @@
-# IsoGUI Screen
+# Idogui Screen
 
 <p align="center">
   <img src="https://img.shields.io/badge/Laravel-11-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 11">
@@ -9,7 +9,7 @@
 
 ## 📱 Descripción
 
-**IsoGUI Screen** es una aplicación SaaS para crear mockups profesionales de screenshots de aplicaciones móviles. Diseñada para desarrolladores, diseñadores y equipos de marketing que necesitan generar imágenes atractivas para App Store y Google Play.
+**Idogui Screen** es una aplicación SaaS para crear mockups profesionales de screenshots de aplicaciones móviles. Diseñada para desarrolladores, diseñadores y equipos de marketing que necesitan generar imágenes atractivas para App Store y Google Play.
 
 ### ✨ Características Principales
 
