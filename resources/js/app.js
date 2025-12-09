@@ -9,11 +9,13 @@ import './bootstrap';
 
 import { createApp } from 'vue';
 import MockupEditor from './components/MockupEditor.vue';
+import AdminMockups from './components/AdminMockups.vue';
 
 // Crear aplicación Vue
 const app = createApp({
     components: {
         MockupEditor,
+        AdminMockups,
     },
     data() {
         return {

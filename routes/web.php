@@ -102,4 +102,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', function () {
         return view('profile.index');
     })->name('profile.index');
+
+    // Rutas de administración (solo para admin)
+    Route::middleware([\App\Http\Middleware\EnsureUserIsAdmin::class])->prefix('admin')->group(function () {
+        Route::get('/mockups', function () {
+            return view('admin.mockups');
+        })->name('admin.mockups');
+    });
 });

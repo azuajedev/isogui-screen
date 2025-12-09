@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DesignController;
 use App\Http\Controllers\DesignImageController;
 use App\Http\Controllers\MarketingCopyController;
+use App\Http\Controllers\MockupController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RenderController;
 use App\Http\Controllers\ScreenshotController;
@@ -104,6 +105,24 @@ Route::middleware('auth:web')->group(function () {
     Route::prefix('marketing')->group(function () {
         Route::post('/generate', [MarketingCopyController::class, 'generate']);
         Route::post('/translate', [MarketingCopyController::class, 'translate']);
+    });
+
+    // Mockups (imágenes prediseñadas compartidas)
+    Route::prefix('mockups')->group(function () {
+        Route::get('/', [MockupController::class, 'index']);
+        Route::get('/categories', [MockupController::class, 'categories']);
+        Route::get('/{id}', [MockupController::class, 'show']);
+        Route::post('/{id}/usage', [MockupController::class, 'incrementUsage']);
+    });
+
+    // Rutas de administración de mockups (solo admin)
+    Route::middleware('admin')->prefix('admin/mockups')->group(function () {
+        Route::get('/', [MockupController::class, 'adminIndex']);
+        Route::post('/', [MockupController::class, 'store']);
+        Route::put('/{id}', [MockupController::class, 'update']);
+        Route::post('/{id}/toggle-active', [MockupController::class, 'toggleActive']);
+        Route::delete('/{id}', [MockupController::class, 'destroy']);
+        Route::get('/stats', [MockupController::class, 'stats']);
     });
 });
 

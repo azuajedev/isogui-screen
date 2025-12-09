@@ -87,12 +87,8 @@ export default {
       default: null,
     },
     texts: {
-      type: Object,
-      default: () => ({
-        headline: '',
-        subheadline: '',
-        cta: '',
-      }),
+      type: Array,
+      default: () => [],
     },
     backgroundColor: {
       type: String,
@@ -117,9 +113,14 @@ export default {
     const renderPending = ref(false);
     const isResizing = ref(false);
     const resizeHandle = ref(null); // 'se', 'sw', 'ne', 'nw' para las esquinas
+    const isRotating = ref(false);
+    const rotationStart = ref({ angle: 0, mouseAngle: 0 });
     const isDraggingText = ref(false);
     const selectedTextKey = ref(null);
     const selectedImageIndex = ref(null); // Índice de la imagen seleccionada
+    const selectedTextItem = ref(null); // Texto seleccionado para rotación
+    const selectedTextForResize = ref(null); // Texto seleccionado para resize
+    const isResizingText = ref(false);
     const isShiftPressed = ref(false); // Para mantener relación de aspecto
     let rafId = null; // Request animation frame ID
     
@@ -263,7 +264,10 @@ export default {
           // Ordenar por zIndex
           const sortedImages = [...props.canvasImages].sort((a, b) => a.zIndex - b.zIndex);
           
-          for (const img of sortedImages) {
+          for (let i = 0; i < sortedImages.length; i++) {
+            const img = sortedImages[i];
+            const imgIndex = props.canvasImages.indexOf(img);
+            
             // Cargar y cachear cada imagen
             if (!img._cachedImg || img._cachedImg._src !== img.url) {
               try {
@@ -293,132 +297,99 @@ export default {
               continue;
             }
             
-            // Dibujar la imagen (optimizado para fast render)
+            // Dibujar la imagen
             try {
-              if (fastRender && !img.rotation) {
-                // Modo rápido: sin transformaciones
-                ctx.drawImage(img._cachedImg, img.x, img.y, img.width, img.height);
-              } else {
-                // Modo normal: con rotación
-                ctx.save();
+              ctx.save();
+              if (img.rotation && img.rotation !== 0) {
+                // Con rotación
                 ctx.translate(img.x + img.width / 2, img.y + img.height / 2);
-                ctx.rotate((img.rotation || 0) * Math.PI / 180);
+                ctx.rotate(img.rotation * Math.PI / 180);
                 ctx.drawImage(img._cachedImg, -img.width / 2, -img.height / 2, img.width, img.height);
-                ctx.restore();
+              } else {
+                // Sin rotación (más simple)
+                ctx.drawImage(img._cachedImg, img.x, img.y, img.width, img.height);
               }
+              ctx.restore();
             } catch (error) {
               console.error('Error dibujando imagen:', img.url, error);
               continue;
             }
             
-            // Dibujar handles de resize solo si no estamos en modo fast render
-            if (!fastRender && !isDragging.value && !isResizing.value) {
-              drawResizeHandles(ctx, img.x, img.y, img.width, img.height);
+            // Dibujar handles solo si esta imagen está seleccionada
+            if (!fastRender && !isDragging.value && !isResizing.value && !isRotating.value && selectedImageIndex.value === imgIndex) {
+              drawResizeHandles(ctx, img.x, img.y, img.width, img.height, img.rotation || 0);
             }
           }
         }
 
-        // Textos (solo si no es fast render)
-        if (!fastRender) {
-          const textsConfig = props.template?.layout_config?.texts || {};
+        // Textos (siempre renderizar, pero handles solo si no es fast render)
+        const textsConfig = props.template?.layout_config?.texts || {};
 
-          // Headline
-          if (props.texts.headline && textsConfig.headline) {
-            const cfg = textsConfig.headline;
-            const x = textPositions.value.headline?.x ?? cfg.x ?? 50;
-            const y = textPositions.value.headline?.y ?? cfg.y ?? 80;
+        // Renderizar textos dinámicos
+        if (props.texts && Array.isArray(props.texts)) {
+          props.texts.forEach((textItem, index) => {
+            if (!textItem.content) return;
             
-            // Inicializar posición si no existe
-            if (!textPositions.value.headline) {
-              textPositions.value.headline = { x, y, width: 0, height: 0 };
+            // Posición por defecto escalonada verticalmente
+            const defaultX = 50;
+            const defaultY = 80 + (index * 60);
+            
+            const x = textItem.x ?? defaultX;
+            const y = textItem.y ?? defaultY;
+            const rotation = textItem.rotation || 0;
+            
+            // Aplicar estilos del texto
+            const fontStyle = textItem.fontStyle || 'normal';
+            const fontWeight = textItem.fontWeight || 'normal';
+            const fontSize = textItem.fontSize || 24;
+            const fontFamily = textItem.fontFamily || 'Arial';
+            const color = textItem.color || '#000000';
+            
+            // Medir texto antes de rotar
+            ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}, sans-serif`;
+            const metrics = ctx.measureText(textItem.content);
+            const textWidth = metrics.width;
+            const textHeight = fontSize;
+            
+            // Aplicar rotación si existe
+            ctx.save();
+            if (rotation !== 0) {
+              ctx.translate(x + textWidth / 2, y - textHeight / 2);
+              ctx.rotate(rotation * Math.PI / 180);
+              ctx.translate(-textWidth / 2, textHeight / 2);
+            } else {
+              ctx.translate(x, y);
             }
             
-            ctx.font = `${cfg.weight || 'bold'} ${cfg.size || 48}px Inter, sans-serif`;
-            ctx.fillStyle = cfg.color || '#ffffff';
-            ctx.textAlign = cfg.align || 'left';
-            ctx.fillText(props.texts.headline, x, y);
+            ctx.fillStyle = color;
+            ctx.textAlign = 'left';
+            ctx.fillText(textItem.content, 0, 0);
+            ctx.restore();
             
-            // Calcular dimensiones del texto para detección de clicks
-            const metrics = ctx.measureText(props.texts.headline);
-            textPositions.value.headline.width = metrics.width;
-            textPositions.value.headline.height = cfg.size || 48;
-          }
-
-          // Subheadline
-          if (props.texts.subheadline && textsConfig.subheadline) {
-            const cfg = textsConfig.subheadline;
-            const x = textPositions.value.subheadline?.x ?? cfg.x ?? 50;
-            const y = textPositions.value.subheadline?.y ?? cfg.y ?? 130;
-            
-            if (!textPositions.value.subheadline) {
-              textPositions.value.subheadline = { x, y, width: 0, height: 0 };
+            // Guardar dimensiones para detección de clicks
+            if (!textPositions.value[`text_${textItem.id}`]) {
+              textPositions.value[`text_${textItem.id}`] = {};
             }
+            textPositions.value[`text_${textItem.id}`].x = x;
+            textPositions.value[`text_${textItem.id}`].y = y;
+            textPositions.value[`text_${textItem.id}`].width = textWidth;
+            textPositions.value[`text_${textItem.id}`].height = textHeight;
+            textPositions.value[`text_${textItem.id}`].rotation = rotation;
             
-            ctx.font = `${cfg.weight || 'normal'} ${cfg.size || 24}px Inter, sans-serif`;
-            ctx.fillStyle = cfg.color || 'rgba(255,255,255,0.8)';
-            ctx.textAlign = cfg.align || 'left';
-            ctx.fillText(props.texts.subheadline, x, y);
-            
-            const metrics = ctx.measureText(props.texts.subheadline);
-            textPositions.value.subheadline.width = metrics.width;
-            textPositions.value.subheadline.height = cfg.size || 24;
-          }
-
-          // CTA
-          if (props.texts.cta && textsConfig.cta) {
-            const cfg = textsConfig.cta;
-            const x = textPositions.value.cta?.x ?? cfg.x ?? 50;
-            const y = textPositions.value.cta?.y ?? cfg.y ?? 580;
-            
-            if (!textPositions.value.cta) {
-              textPositions.value.cta = { x, y, width: 0, height: 0 };
-            }
-
-            // Botón de fondo
-            if (cfg.background) {
-              ctx.fillStyle = cfg.background;
-              const padding = cfg.padding || 20;
-              const radius = cfg.border_radius || 8;
-              const bgX = x - padding;
-              const bgY = y - (cfg.size || 18) - padding / 2;
-              const bgWidth = ctx.measureText(props.texts.cta).width + padding * 2;
-              const bgHeight = (cfg.size || 18) + padding;
-
-              // Polyfill para roundRect en navegadores antiguos
-              ctx.beginPath();
-              if (ctx.roundRect) {
-                ctx.roundRect(bgX, bgY, bgWidth, bgHeight, radius);
-              } else {
-                // Fallback manual para navegadores sin soporte
-                ctx.moveTo(bgX + radius, bgY);
-                ctx.lineTo(bgX + bgWidth - radius, bgY);
-                ctx.arcTo(bgX + bgWidth, bgY, bgX + bgWidth, bgY + radius, radius);
-                ctx.lineTo(bgX + bgWidth, bgY + bgHeight - radius);
-                ctx.arcTo(bgX + bgWidth, bgY + bgHeight, bgX + bgWidth - radius, bgY + bgHeight, radius);
-                ctx.lineTo(bgX + radius, bgY + bgHeight);
-                ctx.arcTo(bgX, bgY + bgHeight, bgX, bgY + bgHeight - radius, radius);
-                ctx.lineTo(bgX, bgY + radius);
-                ctx.arcTo(bgX, bgY, bgX + radius, bgY, radius);
-                ctx.closePath();
+            // Dibujar handles solo si no es fast render y este texto está seleccionado
+            if (!fastRender) {
+              const isSelected = selectedTextKey.value === `text_${textItem.id}` || selectedTextItem.value?.id === textItem.id;
+              if (!isDragging.value && !isResizing.value && !isRotating.value && !isResizingText.value && isSelected) {
+                drawTextHandles(ctx, x, y, textWidth, textHeight, rotation);
               }
-              ctx.fill();
             }
-
-            ctx.font = `${cfg.weight || '600'} ${cfg.size || 18}px Inter, sans-serif`;
-            ctx.fillStyle = cfg.color || '#ffffff';
-            ctx.textAlign = cfg.align || 'left';
-            ctx.fillText(props.texts.cta, x, y);
-            
-            const metrics = ctx.measureText(props.texts.cta);
-            textPositions.value.cta.width = metrics.width;
-            textPositions.value.cta.height = cfg.size || 18;
-          }
-          
-          // Dibujar indicadores de textos si no se está arrastrando
-          if (!isDragging.value && !isResizing.value && !isDraggingText.value) {
-            drawTextIndicators(ctx, textsConfig);
-          }
-        } // Cierre del if (!fastRender)
+          });
+        }
+        
+        // Dibujar indicadores de textos solo si no es fast render y no se está arrastrando
+        if (!fastRender && !isDragging.value && !isResizing.value && !isDraggingText.value) {
+          drawTextIndicators(ctx, textsConfig);
+        }
 
         if (!fastRender) {
           emit('rendered', canvas.value.toDataURL('image/png'));
@@ -486,24 +457,173 @@ export default {
     };
 
     // Dibujar handles de resize
-    const drawResizeHandles = (ctx, x, y, width, height) => {
+    const drawResizeHandles = (ctx, x, y, width, height, rotation = 0) => {
       // Tamaño constante en pantalla independiente del zoom
       const handleSize = 12 / zoom.value;
-      const handles = [
-        { x: x + width, y: y + height, cursor: 'nwse-resize', id: 'se' },
-        { x: x, y: y + height, cursor: 'nesw-resize', id: 'sw' },
-        { x: x + width, y: y, cursor: 'nesw-resize', id: 'ne' },
-        { x: x, y: y, cursor: 'nwse-resize', id: 'nw' },
+      
+      // Centro de la imagen para rotación
+      const centerX = x + width / 2;
+      const centerY = y + height / 2;
+      
+      // Posiciones originales de las esquinas (relativas al centro)
+      const corners = [
+        { dx: width / 2, dy: height / 2, id: 'se' },    // sureste
+        { dx: -width / 2, dy: height / 2, id: 'sw' },   // suroeste
+        { dx: width / 2, dy: -height / 2, id: 'ne' },   // noreste
+        { dx: -width / 2, dy: -height / 2, id: 'nw' },  // noroeste
+      ];
+      
+      ctx.save();
+      ctx.fillStyle = '#6366f1';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 / zoom.value;
+      
+      // Aplicar rotación si existe
+      if (rotation && rotation !== 0) {
+        const rad = rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        
+        corners.forEach(corner => {
+          // Rotar la posición del handle
+          const rotatedX = corner.dx * cos - corner.dy * sin;
+          const rotatedY = corner.dx * sin + corner.dy * cos;
+          
+          const handleX = centerX + rotatedX;
+          const handleY = centerY + rotatedY;
+          
+          ctx.fillRect(handleX - handleSize/2, handleY - handleSize/2, handleSize, handleSize);
+          ctx.strokeRect(handleX - handleSize/2, handleY - handleSize/2, handleSize, handleSize);
+        });
+      } else {
+        // Sin rotación, dibujar en las esquinas directas
+        corners.forEach(corner => {
+          const handleX = centerX + corner.dx;
+          const handleY = centerY + corner.dy;
+          
+          ctx.fillRect(handleX - handleSize/2, handleY - handleSize/2, handleSize, handleSize);
+          ctx.strokeRect(handleX - handleSize/2, handleY - handleSize/2, handleSize, handleSize);
+        });
+      }
+      
+      ctx.restore();
+      
+      // Dibujar handle de rotación (arriba del centro)
+      drawRotateHandle(ctx, x, y, width, height, rotation, 'image');
+    };
+    
+    // Dibujar handle de rotación
+    const drawRotateHandle = (ctx, x, y, width, height, rotation = 0, type = 'image') => {
+      const handleSize = 10 / zoom.value;
+      const lineLength = 30 / zoom.value;
+      
+      // Centro del elemento
+      const centerX = x + width / 2;
+      const centerY = y + (type === 'text' ? -height / 2 : height / 2);
+      
+      // Calcular posición del handle rotado (arriba del centro)
+      let handleX = centerX;
+      let handleY = centerY - (type === 'text' ? height / 2 : height / 2) - lineLength;
+      let lineStartY = centerY - (type === 'text' ? height / 2 : height / 2);
+      
+      // Si hay rotación, rotar el handle
+      if (rotation && rotation !== 0) {
+        const rad = rotation * Math.PI / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        
+        // Distancia desde el centro al handle
+        const distanceY = -(type === 'text' ? height / 2 : height / 2) - lineLength;
+        
+        // Rotar la posición del handle
+        handleX = centerX + (0 * cos - distanceY * sin);
+        handleY = centerY + (0 * sin + distanceY * cos);
+        
+        // Punto de inicio de la línea (borde superior del elemento)
+        const lineDistanceY = -(type === 'text' ? height / 2 : height / 2);
+        lineStartY = centerY + lineDistanceY * cos;
+        const lineStartX = centerX - lineDistanceY * sin;
+        
+        ctx.save();
+        
+        // Dibujar línea conectora
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2 / zoom.value;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, lineStartY);
+        ctx.lineTo(handleX, handleY);
+        ctx.stroke();
+      } else {
+        ctx.save();
+        
+        // Dibujar línea conectora sin rotación
+        ctx.strokeStyle = '#6366f1';
+        ctx.lineWidth = 2 / zoom.value;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(centerX, lineStartY);
+        ctx.lineTo(handleX, handleY);
+        ctx.stroke();
+      }
+      
+      // Dibujar círculo de rotación
+      ctx.fillStyle = '#22c55e';
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2 / zoom.value;
+      ctx.beginPath();
+      ctx.arc(handleX, handleY, handleSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      
+      // Dibujar icono de rotación dentro del círculo
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5 / zoom.value;
+      const iconRadius = handleSize / 3;
+      ctx.beginPath();
+      ctx.arc(handleX, handleY, iconRadius, 0.2, Math.PI * 1.8);
+      ctx.stroke();
+      // Flecha
+      const arrowSize = iconRadius / 2;
+      ctx.beginPath();
+      ctx.moveTo(handleX - iconRadius * 0.7, handleY - iconRadius * 0.7);
+      ctx.lineTo(handleX - iconRadius * 0.7 - arrowSize, handleY - iconRadius * 0.7);
+      ctx.lineTo(handleX - iconRadius * 0.7, handleY - iconRadius * 0.7 - arrowSize);
+      ctx.stroke();
+      
+      ctx.restore();
+    };
+    
+    // Dibujar handles completos para texto (resize + rotación)
+    const drawTextHandles = (ctx, x, y, width, height, rotation = 0) => {
+      // Dibujar borde de selección
+      ctx.save();
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2 / zoom.value;
+      ctx.setLineDash([5 / zoom.value, 5 / zoom.value]);
+      ctx.strokeRect(x - 4 / zoom.value, y - height - 4 / zoom.value, width + 8 / zoom.value, height + 8 / zoom.value);
+      ctx.restore();
+      
+      // Dibujar handles de resize en las esquinas
+      const handleSize = 12 / zoom.value;
+      const corners = [
+        { x: x + width, y: y, cursor: 'nwse-resize', id: 'se' },
+        { x: x, y: y, cursor: 'nesw-resize', id: 'sw' },
+        { x: x + width, y: y - height, cursor: 'nesw-resize', id: 'ne' },
+        { x: x, y: y - height, cursor: 'nwse-resize', id: 'nw' },
       ];
 
       ctx.fillStyle = '#6366f1';
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2 / zoom.value;
 
-      handles.forEach(handle => {
+      corners.forEach(handle => {
         ctx.fillRect(handle.x - handleSize/2, handle.y - handleSize/2, handleSize, handleSize);
         ctx.strokeRect(handle.x - handleSize/2, handle.y - handleSize/2, handleSize, handleSize);
       });
+      
+      // Dibujar handle de rotación
+      drawRotateHandle(ctx, x, y, width, height, rotation, 'text');
     };
     
     // Dibujar indicadores de textos
@@ -560,8 +680,15 @@ export default {
     
     // Verificar si el mouse está sobre un texto
     const getTextUnderMouse = (mouseX, mouseY) => {
+      if (!props.texts || !Array.isArray(props.texts)) return null;
+      
       const padding = 8;
-      for (const [key, pos] of Object.entries(textPositions.value)) {
+      // Recorrer en reversa para priorizar los textos superiores (últimos dibujados)
+      for (let i = props.texts.length - 1; i >= 0; i--) {
+        const textItem = props.texts[i];
+        const textKey = `text_${textItem.id}`;
+        const pos = textPositions.value[textKey];
+        
         if (pos && pos.width > 0) {
           const x1 = pos.x - padding;
           const y1 = pos.y - pos.height - padding;
@@ -569,7 +696,7 @@ export default {
           const y2 = pos.y + padding;
           
           if (mouseX >= x1 && mouseX <= x2 && mouseY >= y1 && mouseY <= y2) {
-            return key;
+            return textKey;
           }
         }
       }
@@ -588,18 +715,97 @@ export default {
       const mouseX = (e.clientX - rect.left - offsetX) / zoom.value;
       const mouseY = (e.clientY - rect.top - offsetY) / zoom.value;
       
-      // Verificar si está sobre un texto
-      const textKey = getTextUnderMouse(mouseX, mouseY);
-      if (textKey && props.texts[textKey]) {
-        isDraggingText.value = true;
-        selectedTextKey.value = textKey;
-        const pos = textPositions.value[textKey];
-        dragStart.value = { 
-          x: mouseX - pos.x, 
-          y: mouseY - pos.y 
-        };
-        canvasCursor.value = 'move';
-        return;
+      // Verificar si está sobre un texto (recorrer en reversa para priorizar los últimos)
+      if (props.texts && Array.isArray(props.texts)) {
+        for (let i = props.texts.length - 1; i >= 0; i--) {
+          const textItem = props.texts[i];
+          const textKey = `text_${textItem.id}`;
+          const pos = textPositions.value[textKey];
+          
+          if (pos) {
+            // Si el texto está seleccionado, verificar handles
+            const isSelected = selectedTextKey.value === textKey || selectedTextItem.value?.id === textItem.id;
+            
+            if (isSelected) {
+              // Verificar handle de rotación primero
+              const rotateHandleSize = 10 / zoom.value;
+              const lineLength = 30 / zoom.value;
+              const rotateCenterX = pos.x + pos.width / 2;
+              const rotateCenterY = pos.y - pos.height - lineLength;
+              let dx = mouseX - rotateCenterX;
+              let dy = mouseY - rotateCenterY;
+              let distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance <= rotateHandleSize) {
+                isRotating.value = true;
+                selectedTextItem.value = textItem;
+                selectedTextKey.value = textKey;
+                const centerX = pos.x + pos.width / 2;
+                const centerY = pos.y - pos.height / 2;
+                const angle = Math.atan2(mouseY - centerY, mouseX - centerX) * 180 / Math.PI;
+                rotationStart.value = {
+                  angle: textItem.rotation || 0,
+                  mouseAngle: angle
+                };
+                canvasCursor.value = 'crosshair';
+                return;
+              }
+              
+              // Verificar handles de resize
+              const resizeHandleSize = 12 / zoom.value;
+              const corners = [
+                { id: 'nw', x: pos.x, y: pos.y - pos.height, cursor: 'nwse-resize' },
+                { id: 'ne', x: pos.x + pos.width, y: pos.y - pos.height, cursor: 'nesw-resize' },
+                { id: 'sw', x: pos.x, y: pos.y, cursor: 'nesw-resize' },
+                { id: 'se', x: pos.x + pos.width, y: pos.y, cursor: 'nwse-resize' }
+              ];
+              
+              for (const corner of corners) {
+                dx = mouseX - corner.x;
+                dy = mouseY - corner.y;
+                distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= resizeHandleSize / 2) {
+                  isResizingText.value = true;
+                  selectedTextForResize.value = textItem;
+                  selectedTextKey.value = textKey;
+                  resizeHandle.value = corner.id;
+                  dragStart.value = { 
+                    x: mouseX, 
+                    y: mouseY,
+                    initialFontSize: textItem.fontSize || 24,
+                    initialWidth: pos.width,
+                    initialHeight: pos.height
+                  };
+                  canvasCursor.value = corner.cursor;
+                  return;
+                }
+              }
+            }
+            
+            // Verificar si está dentro del texto (para selección o movimiento)
+            if (mouseX >= pos.x && mouseX <= pos.x + pos.width &&
+                mouseY >= pos.y - pos.height && mouseY <= pos.y) {
+              if (isSelected) {
+                // Si ya está seleccionado, mover
+                isDraggingText.value = true;
+                selectedTextKey.value = textKey;
+                selectedTextItem.value = textItem;
+                dragStart.value = { 
+                  x: mouseX - pos.x, 
+                  y: mouseY - pos.y 
+                };
+                canvasCursor.value = 'move';
+              } else {
+                // Si no está seleccionado, seleccionar
+                selectedTextKey.value = textKey;
+                selectedTextItem.value = textItem;
+                render();
+              }
+              return;
+            }
+          }
+        }
       }
       
       // Verificar imágenes del canvas (de mayor a menor zIndex)
@@ -610,50 +816,136 @@ export default {
           const img = sortedImages[i];
           const imgIndex = props.canvasImages.indexOf(img);
           
-          // Verificar handles de resize primero (tamaño constante en pantalla)
-          const handleSize = 8 / zoom.value;
-          const corners = [
-            { id: 'nw', x: img.x, y: img.y, cursor: 'nwse-resize' },
-            { id: 'ne', x: img.x + img.width, y: img.y, cursor: 'nesw-resize' },
-            { id: 'sw', x: img.x, y: img.y + img.height, cursor: 'nesw-resize' },
-            { id: 'se', x: img.x + img.width, y: img.y + img.height, cursor: 'nwse-resize' }
-          ];
+          // Si la imagen está seleccionada, verificar handles
+          const isSelected = selectedImageIndex.value === imgIndex;
           
-          for (const corner of corners) {
-            const dx = mouseX - corner.x;
-            const dy = mouseY - corner.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+          if (isSelected) {
+            const centerX = img.x + img.width / 2;
+            const centerY = img.y + img.height / 2;
+            const rotation = img.rotation || 0;
             
-            if (distance <= handleSize) {
-              isResizing.value = true;
-              resizeHandle.value = corner.id;
+            // Verificar handle de rotación primero (siempre en la parte superior rotada)
+            const rotateHandleSize = 10 / zoom.value;
+            const lineLength = 30 / zoom.value;
+            
+            let rotateCenterX = centerX;
+            let rotateCenterY = centerY - img.height / 2 - lineLength;
+            
+            // Si hay rotación, rotar la posición del handle
+            if (rotation && rotation !== 0) {
+              const rad = rotation * Math.PI / 180;
+              const cos = Math.cos(rad);
+              const sin = Math.sin(rad);
+              const distanceY = -img.height / 2 - lineLength;
+              rotateCenterX = centerX + (0 * cos - distanceY * sin);
+              rotateCenterY = centerY + (0 * sin + distanceY * cos);
+            }
+            
+            let dx = mouseX - rotateCenterX;
+            let dy = mouseY - rotateCenterY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= rotateHandleSize) {
+              isRotating.value = true;
               selectedImageIndex.value = imgIndex;
-              dragStart.value = { x: mouseX, y: mouseY };
-              dragStart.value.initialPos = { ...img };
-              canvasCursor.value = corner.cursor;
-              
-              // Preparar el cache del fondo ANTES de empezar el resize
-              prepareBaseCache();
+              const angle = Math.atan2(mouseY - centerY, mouseX - centerX) * 180 / Math.PI;
+              rotationStart.value = {
+                angle: rotation,
+                mouseAngle: angle
+              };
+              canvasCursor.value = 'crosshair';
               return;
+            }
+            
+            // Verificar handles de resize (en las esquinas rotadas)
+            const handleSize = 12 / zoom.value;
+            
+            // Posiciones de las esquinas relativas al centro
+            const cornerOffsets = [
+              { dx: -img.width / 2, dy: -img.height / 2, id: 'nw', cursor: 'nwse-resize' },
+              { dx: img.width / 2, dy: -img.height / 2, id: 'ne', cursor: 'nesw-resize' },
+              { dx: -img.width / 2, dy: img.height / 2, id: 'sw', cursor: 'nesw-resize' },
+              { dx: img.width / 2, dy: img.height / 2, id: 'se', cursor: 'nwse-resize' }
+            ];
+            
+            // Aplicar rotación a las esquinas
+            if (rotation && rotation !== 0) {
+              const rad = rotation * Math.PI / 180;
+              const cos = Math.cos(rad);
+              const sin = Math.sin(rad);
+              
+              for (const corner of cornerOffsets) {
+                const rotatedX = corner.dx * cos - corner.dy * sin;
+                const rotatedY = corner.dx * sin + corner.dy * cos;
+                const handleX = centerX + rotatedX;
+                const handleY = centerY + rotatedY;
+                
+                dx = mouseX - handleX;
+                dy = mouseY - handleY;
+                distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= handleSize / 2) {
+                  isResizing.value = true;
+                  resizeHandle.value = corner.id;
+                  selectedImageIndex.value = imgIndex;
+                  dragStart.value = { x: mouseX, y: mouseY };
+                  dragStart.value.initialPos = { ...img };
+                  canvasCursor.value = corner.cursor;
+                  return;
+                }
+              }
+            } else {
+              // Sin rotación, usar posiciones directas
+              for (const corner of cornerOffsets) {
+                const handleX = centerX + corner.dx;
+                const handleY = centerY + corner.dy;
+                
+                dx = mouseX - handleX;
+                dy = mouseY - handleY;
+                distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance <= handleSize / 2) {
+                  isResizing.value = true;
+                  resizeHandle.value = corner.id;
+                  selectedImageIndex.value = imgIndex;
+                  dragStart.value = { x: mouseX, y: mouseY };
+                  dragStart.value.initialPos = { ...img };
+                  canvasCursor.value = corner.cursor;
+                  return;
+                }
+              }
             }
           }
           
           // Verificar si está dentro de la imagen
           if (mouseX >= img.x && mouseX <= img.x + img.width &&
               mouseY >= img.y && mouseY <= img.y + img.height) {
-            isDragging.value = true;
-            selectedImageIndex.value = imgIndex;
-            dragStart.value = { 
-              x: mouseX - img.x, 
-              y: mouseY - img.y 
-            };
-            canvasCursor.value = 'grabbing';
-            
-            // Preparar el cache del fondo ANTES de empezar el drag
-            prepareBaseCache();
+            if (isSelected) {
+              // Si ya está seleccionada, arrastrar
+              isDragging.value = true;
+              selectedImageIndex.value = imgIndex;
+              dragStart.value = { 
+                x: mouseX - img.x, 
+                y: mouseY - img.y 
+              };
+              canvasCursor.value = 'grabbing';
+            } else {
+              // Si no está seleccionada, seleccionar
+              selectedImageIndex.value = imgIndex;
+              render();
+            }
             return;
           }
         }
+      }
+      
+      // Si llegamos aquí, el click fue en el canvas vacío -> deseleccionar todo
+      if (selectedImageIndex.value !== null || selectedTextKey.value !== null || selectedTextItem.value !== null) {
+        selectedImageIndex.value = null;
+        selectedTextKey.value = null;
+        selectedTextItem.value = null;
+        selectedTextForResize.value = null;
+        render();
       }
     };
 
@@ -669,12 +961,68 @@ export default {
       const mouseX = (e.clientX - rect.left - offsetX) / zoom.value;
       const mouseY = (e.clientY - rect.top - offsetY) / zoom.value;
       
-      if (isDraggingText.value) {
+      if (isRotating.value) {
+        // Rotar imagen o texto
+        if (selectedImageIndex.value !== null) {
+          const img = props.canvasImages[selectedImageIndex.value];
+          const centerX = img.x + img.width / 2;
+          const centerY = img.y + img.height / 2;
+          const currentAngle = Math.atan2(mouseY - centerY, mouseX - centerX) * 180 / Math.PI;
+          let newRotation = rotationStart.value.angle + (currentAngle - rotationStart.value.mouseAngle);
+          
+          // Snap a ángulos de 15 grados si se mantiene Shift
+          if (isShiftPressed.value) {
+            newRotation = Math.round(newRotation / 15) * 15;
+          }
+          
+          // Normalizar entre 0 y 360
+          newRotation = ((newRotation % 360) + 360) % 360;
+          img.rotation = newRotation;
+        } else if (selectedTextItem.value) {
+          const pos = textPositions.value[`text_${selectedTextItem.value.id}`];
+          if (pos) {
+            const centerX = pos.x + pos.width / 2;
+            const centerY = pos.y - pos.height / 2;
+            const currentAngle = Math.atan2(mouseY - centerY, mouseX - centerX) * 180 / Math.PI;
+            let newRotation = rotationStart.value.angle + (currentAngle - rotationStart.value.mouseAngle);
+            
+            // Snap a ángulos de 15 grados si se mantiene Shift
+            if (isShiftPressed.value) {
+              newRotation = Math.round(newRotation / 15) * 15;
+            }
+            
+            // Normalizar entre 0 y 360
+            newRotation = ((newRotation % 360) + 360) % 360;
+            selectedTextItem.value.rotation = newRotation;
+          }
+        }
+        
+        if (!renderPending.value) {
+          renderPending.value = true;
+          requestAnimationFrame(() => {
+            render();
+            renderPending.value = false;
+          });
+        }
+      } else if (isDraggingText.value) {
         // Mover texto
         const textKey = selectedTextKey.value;
         if (textKey && textPositions.value[textKey]) {
-          textPositions.value[textKey].x = mouseX - dragStart.value.x;
-          textPositions.value[textKey].y = mouseY - dragStart.value.y;
+          const newX = mouseX - dragStart.value.x;
+          const newY = mouseY - dragStart.value.y;
+          
+          textPositions.value[textKey].x = newX;
+          textPositions.value[textKey].y = newY;
+          
+          // Actualizar la posición en el textItem original
+          if (props.texts && Array.isArray(props.texts)) {
+            const textId = parseInt(textKey.replace('text_', ''));
+            const textItem = props.texts.find(t => t.id === textId);
+            if (textItem) {
+              textItem.x = newX;
+              textItem.y = newY;
+            }
+          }
           
           if (!renderPending.value) {
             renderPending.value = true;
@@ -687,79 +1035,105 @@ export default {
       } else if (isResizing.value && selectedImageIndex.value !== null) {
         // Resize de imagen del canvas
         const img = props.canvasImages[selectedImageIndex.value];
+        const rotation = img.rotation || 0;
         
-        // Usar la relación de aspecto original de la imagen, no del resize actual
-        const aspectRatio = img.originalAspectRatio || (img.width / img.height);
+        // Centro actual de la imagen
+        const centerX = dragStart.value.initialPos.x + dragStart.value.initialPos.width / 2;
+        const centerY = dragStart.value.initialPos.y + dragStart.value.initialPos.height / 2;
+        
+        // Calcular el vector desde el centro hasta el mouse
+        const deltaX = mouseX - centerX;
+        const deltaY = mouseY - centerY;
+        
+        // Si hay rotación, necesitamos transformar el movimiento del mouse al espacio rotado
+        let localDeltaX = deltaX;
+        let localDeltaY = deltaY;
+        
+        if (rotation && rotation !== 0) {
+          const rad = -rotation * Math.PI / 180; // Negativo para invertir
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          localDeltaX = deltaX * cos - deltaY * sin;
+          localDeltaY = deltaX * sin + deltaY * cos;
+        }
+        
+        // Usar la relación de aspecto original de la imagen
+        const aspectRatio = img.originalAspectRatio || (dragStart.value.initialPos.width / dragStart.value.initialPos.height);
+        
+        // Calcular el desplazamiento del mouse desde el inicio del resize
+        const mouseDeltaX = mouseX - dragStart.value.x;
+        const mouseDeltaY = mouseY - dragStart.value.y;
+        
+        // Transformar el delta del mouse al espacio rotado si es necesario
+        let localMouseDeltaX = mouseDeltaX;
+        let localMouseDeltaY = mouseDeltaY;
+        
+        if (rotation && rotation !== 0) {
+          const rad = -rotation * Math.PI / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          localMouseDeltaX = mouseDeltaX * cos - mouseDeltaY * sin;
+          localMouseDeltaY = mouseDeltaX * sin + mouseDeltaY * cos;
+        }
+        
+        // Calcular nuevo tamaño basado en el handle y el delta del mouse
+        let newWidth = dragStart.value.initialPos.width;
+        let newHeight = dragStart.value.initialPos.height;
         
         if (isShiftPressed.value) {
-          // Mantener relación de aspecto original de la imagen
-          // Calcular basado en la posición actual del mouse
+          // Mantener relación de aspecto
           switch (resizeHandle.value) {
             case 'se':
-              const newWidth = Math.max(50, mouseX - img.x);
-              img.width = newWidth;
-              img.height = newWidth / aspectRatio;
+              newWidth = Math.max(50, dragStart.value.initialPos.width + localMouseDeltaX * 2);
+              newHeight = newWidth / aspectRatio;
               break;
             case 'sw':
-              const newWidthSW = Math.max(50, img.x + img.width - mouseX);
-              const oldRight = img.x + img.width;
-              img.width = newWidthSW;
-              img.height = newWidthSW / aspectRatio;
-              img.x = oldRight - img.width;
+              newWidth = Math.max(50, dragStart.value.initialPos.width - localMouseDeltaX * 2);
+              newHeight = newWidth / aspectRatio;
               break;
             case 'ne':
-              const newWidthNE = Math.max(50, mouseX - img.x);
-              const oldBottom = img.y + img.height;
-              img.width = newWidthNE;
-              img.height = newWidthNE / aspectRatio;
-              img.y = oldBottom - img.height;
+              newWidth = Math.max(50, dragStart.value.initialPos.width + localMouseDeltaX * 2);
+              newHeight = newWidth / aspectRatio;
               break;
             case 'nw':
-              const newWidthNW = Math.max(50, img.x + img.width - mouseX);
-              const oldRightNW = img.x + img.width;
-              const oldBottomNW = img.y + img.height;
-              img.width = newWidthNW;
-              img.height = newWidthNW / aspectRatio;
-              img.x = oldRightNW - img.width;
-              img.y = oldBottomNW - img.height;
+              newWidth = Math.max(50, dragStart.value.initialPos.width - localMouseDeltaX * 2);
+              newHeight = newWidth / aspectRatio;
               break;
           }
         } else {
-          // Resize libre basado en posición del mouse
+          // Resize libre
           switch (resizeHandle.value) {
             case 'se':
-              img.width = Math.max(50, mouseX - img.x);
-              img.height = Math.max(50, mouseY - img.y);
+              newWidth = Math.max(50, dragStart.value.initialPos.width + localMouseDeltaX * 2);
+              newHeight = Math.max(50, dragStart.value.initialPos.height + localMouseDeltaY * 2);
               break;
             case 'sw':
-              const oldRightSW = img.x + img.width;
-              img.width = Math.max(50, img.x + img.width - mouseX);
-              img.height = Math.max(50, mouseY - img.y);
-              img.x = oldRightSW - img.width;
+              newWidth = Math.max(50, dragStart.value.initialPos.width - localMouseDeltaX * 2);
+              newHeight = Math.max(50, dragStart.value.initialPos.height + localMouseDeltaY * 2);
               break;
             case 'ne':
-              const oldBottomNE = img.y + img.height;
-              img.width = Math.max(50, mouseX - img.x);
-              img.height = Math.max(50, img.y + img.height - mouseY);
-              img.y = oldBottomNE - img.height;
+              newWidth = Math.max(50, dragStart.value.initialPos.width + localMouseDeltaX * 2);
+              newHeight = Math.max(50, dragStart.value.initialPos.height - localMouseDeltaY * 2);
               break;
             case 'nw':
-              const oldRightNW2 = img.x + img.width;
-              const oldBottomNW2 = img.y + img.height;
-              img.width = Math.max(50, img.x + img.width - mouseX);
-              img.height = Math.max(50, img.y + img.height - mouseY);
-              img.x = oldRightNW2 - img.width;
-              img.y = oldBottomNW2 - img.height;
+              newWidth = Math.max(50, dragStart.value.initialPos.width - localMouseDeltaX * 2);
+              newHeight = Math.max(50, dragStart.value.initialPos.height - localMouseDeltaY * 2);
               break;
           }
         }
+        
+        // Aplicar el nuevo tamaño manteniendo el centro fijo
+        img.width = newWidth;
+        img.height = newHeight;
+        img.x = centerX - newWidth / 2;
+        img.y = centerY - newHeight / 2;
         
         // Render con RAF optimizado
         if (!rafId) {
           rafId = requestAnimationFrame(() => {
             if (!isRendering) {
               isRendering = true;
-              renderWithCache();
+              render();
               isRendering = false;
             }
             rafId = null;
@@ -776,10 +1150,38 @@ export default {
           rafId = requestAnimationFrame(() => {
             if (!isRendering) {
               isRendering = true;
-              renderWithCache();
+              render();
               isRendering = false;
             }
             rafId = null;
+          });
+        }
+      } else if (isResizingText.value && selectedTextForResize.value) {
+        // Resize de texto (escalar fontSize)
+        const deltaX = mouseX - dragStart.value.x;
+        const deltaY = mouseY - dragStart.value.y;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const initialDistance = Math.sqrt(
+          dragStart.value.initialWidth * dragStart.value.initialWidth + 
+          dragStart.value.initialHeight * dragStart.value.initialHeight
+        );
+        
+        // Calcular factor de escala basado en la distancia
+        let scaleFactor = distance / initialDistance;
+        
+        // Aplicar límites razonables
+        scaleFactor = Math.max(0.3, Math.min(5, scaleFactor));
+        
+        // Calcular nuevo tamaño de fuente
+        const newFontSize = Math.round(dragStart.value.initialFontSize * scaleFactor);
+        selectedTextForResize.value.fontSize = Math.max(8, Math.min(200, newFontSize));
+        
+        // Render optimizado
+        if (!renderPending.value) {
+          renderPending.value = true;
+          requestAnimationFrame(() => {
+            render();
+            renderPending.value = false;
           });
         }
       } else if (e.target === canvas.value) {
@@ -792,6 +1194,22 @@ export default {
           const sortedImages = [...props.canvasImages].sort((a, b) => b.zIndex - a.zIndex);
           
           for (const img of sortedImages) {
+            // Verificar handle de rotación
+            const rotateHandleSize = 10 / zoom.value;
+            const lineLength = 30 / zoom.value;
+            const rotateCenterX = img.x + img.width / 2;
+            const rotateCenterY = img.y - lineLength;
+            let dx = mouseX - rotateCenterX;
+            let dy = mouseY - rotateCenterY;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance <= rotateHandleSize) {
+              canvasCursor.value = 'crosshair';
+              cursorSet = true;
+              break;
+            }
+            
+            // Verificar handles de resize
             const handleSize = 8 / zoom.value;
             const corners = [
               { x: img.x, y: img.y, cursor: 'nwse-resize' },
@@ -801,9 +1219,9 @@ export default {
             ];
             
             for (const corner of corners) {
-              const dx = mouseX - corner.x;
-              const dy = mouseY - corner.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
+              dx = mouseX - corner.x;
+              dy = mouseY - corner.y;
+              distance = Math.sqrt(dx * dx + dy * dy);
               
               if (distance <= handleSize) {
                 canvasCursor.value = corner.cursor;
@@ -832,7 +1250,7 @@ export default {
     };
 
     const handleMouseUp = () => {
-      if (isDragging.value || isResizing.value || isDraggingText.value) {
+      if (isDragging.value || isResizing.value || isDraggingText.value || isRotating.value || isResizingText.value) {
         // Cancelar RAF pendiente
         if (rafId) {
           cancelAnimationFrame(rafId);
@@ -842,9 +1260,12 @@ export default {
         isDragging.value = false;
         isResizing.value = false;
         isDraggingText.value = false;
+        isRotating.value = false;
+        isResizingText.value = false;
         resizeHandle.value = null;
-        selectedTextKey.value = null;
-        selectedImageIndex.value = null;
+        
+        // NO limpiar selectedTextKey, selectedImageIndex, selectedTextItem
+        // para mantener la selección después de soltar
         isRendering = false;
         
         // Limpiar cache y render final completo

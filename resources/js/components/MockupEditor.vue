@@ -83,38 +83,9 @@
               :class="{ active: canvasOrientation === 'vertical' }"
               @click="toggleCustomOrientation"
             >
-              <!-- Icono de rotación de pantalla - Vertical -->
-              <svg v-if="selectedDevice !== 'custom' && canvasOrientation === 'vertical'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Teléfono vertical recto -->
-                <rect x="8" y="3" width="8" height="18" rx="2"/>
-                <circle cx="12" cy="19" r="0.8"/>
-                <!-- Flechas curvas a los lados -->
-                <path d="M 2 7 A 6 6 0 0 1 2 17" stroke-width="2.5"/>
-                <path d="M 1 15.5 L 2 17 L 3.5 16" stroke-width="2.5"/>
-                <path d="M 22 17 A 6 6 0 0 1 22 7" stroke-width="2.5"/>
-                <path d="M 23 8.5 L 22 7 L 20.5 8" stroke-width="2.5"/>
-              </svg>
-              <!-- Icono de rotación de pantalla - Horizontal -->
-              <svg v-else-if="selectedDevice !== 'custom' && canvasOrientation === 'horizontal'" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Teléfono horizontal recto -->
-                <rect x="3" y="8" width="18" height="8" rx="2"/>
-                <circle cx="19" cy="12" r="0.8"/>
-                <!-- Flechas curvas arriba y abajo -->
-                <path d="M 7 2 A 6 6 0 0 1 17 2" stroke-width="2.5"/>
-                <path d="M 15.5 1 L 17 2 L 16 3.5" stroke-width="2.5"/>
-                <path d="M 17 22 A 6 6 0 0 1 7 22" stroke-width="2.5"/>
-                <path d="M 8.5 23 L 7 22 L 8 20.5" stroke-width="2.5"/>
-              </svg>
-              <!-- Icono de rotación de pantalla - Custom -->
-              <svg v-else xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <!-- Teléfono vertical recto para custom -->
-                <rect x="8" y="3" width="8" height="18" rx="2"/>
-                <circle cx="12" cy="19" r="0.8"/>
-                <!-- Flechas curvas a los lados -->
-                <path d="M 2 7 A 6 6 0 0 1 2 17" stroke-width="2.5"/>
-                <path d="M 1 15.5 L 2 17 L 3.5 16" stroke-width="2.5"/>
-                <path d="M 22 17 A 6 6 0 0 1 22 7" stroke-width="2.5"/>
-                <path d="M 23 8.5 L 22 7 L 20.5 8" stroke-width="2.5"/>
+              <!-- Icono de rotación de pantalla unificado -->
+              <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
+                <path d="M496-182 183-496q-11-11-17-25t-6-29q0-15 6-29t17-25l173-173q11-11 25-16.5t29-5.5q15 0 29 5.5t25 16.5l313 313q11 11 17 25t6 29q0 15-6 29t-17 25L604-182q-11 11-25 16.5t-29 5.5q-15 0-29-5.5T496-182Zm54-58 170-170-310-310-170 170 310 310ZM480 0q-99 0-186.5-37.5t-153-103Q75-206 37.5-293.5T0-480h80q0 71 24 136t66.5 117Q213-175 272-138.5T401-87L296-192l56-56L588-12q-26 6-53.5 9T480 0Zm400-480q0-71-24-136t-66.5-117Q747-785 688-821.5T559-873l105 105-56 56-236-236q26-6 53.5-9t54.5-3q99 0 186.5 37.5t153 103q65.5 65.5 103 153T960-480h-80Zm-400 0Zm-107-76q13 0 21.5-9t8.5-21q0-13-8.5-21.5T373-616q-12 0-21 8.5t-9 21.5q0 12 9 21t21 9Z"/>
               </svg>
             </button>
             <div class="tooltip">
@@ -385,6 +356,53 @@
           </div>
         </div>
 
+        <!-- Sección Mockups (Imágenes Prediseñadas Compartidas) -->
+        <div class="sidebar-section">
+          <div class="section-header">
+            <h2>Mockups</h2>
+            <select v-model="mockupCategoryFilter" class="select-sm" @change="loadMockups">
+              <option value="">Todas las categorías</option>
+              <option v-for="category in mockupCategories" :key="category" :value="category">
+                {{ category }}
+              </option>
+            </select>
+          </div>
+
+          <div class="gallery-grid">
+            <div 
+              v-for="mockup in mockups" 
+              :key="mockup.id"
+              class="gallery-item"
+              @click="insertMockupToCanvas(mockup)"
+              :title="`Click para insertar: ${mockup.name}`"
+            >
+              <img :src="mockup.thumbnail_url" :alt="mockup.name">
+              <div class="gallery-item-overlay">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+              <div class="mockup-name">{{ mockup.name }}</div>
+            </div>
+
+            <!-- Loading state -->
+            <div v-if="loadingMockups" class="empty-state">
+              <p>Cargando mockups...</p>
+            </div>
+
+            <!-- Empty state -->
+            <div v-else-if="mockups.length === 0" class="empty-state">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <p>No hay mockups disponibles</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Sección Templates (solo visible en modo template) -->
         <div class="sidebar-section" v-if="canvasMode === 'template'">
           <div class="section-header">
@@ -424,7 +442,7 @@
           ref="canvasRef"
           :canvas-images="canvasImages"
           :template="canvasMode === 'template' ? selectedTemplate : blankCanvasConfig"
-          :texts="texts"
+          :texts="textItems"
           :background-color="backgroundColor"
           @rendered="handleRendered"
           @error="handleRenderError"
@@ -433,53 +451,121 @@
 
       <!-- Sidebar Derecha: Opciones -->
       <aside class="sidebar sidebar-right">
-        <!-- Textos -->
+        <!-- Textos Dinámicos -->
         <div class="sidebar-section">
           <div class="section-header">
             <h2>Textos</h2>
             <button 
-              v-if="canUseAI" 
               class="btn-icon" 
-              @click="handleGenerateAI" 
-              title="Generar con IA"
+              @click="addNewText" 
+              title="Agregar texto"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
             </button>
           </div>
 
-          <div class="form-group">
-            <label>Headline</label>
-            <input 
-              type="text" 
-              v-model="texts.headline" 
-              placeholder="Texto principal llamativo"
-              maxlength="50"
-            >
-            <span class="char-count">{{ texts.headline?.length || 0 }}/50</span>
+          <!-- Lista de textos -->
+          <div v-if="textItems.length === 0" class="empty-state-small">
+            <p style="font-size: 0.875rem; color: var(--text-secondary); text-align: center; padding: 1rem 0;">
+              No hay textos. Click en + para agregar.
+            </p>
           </div>
 
-          <div class="form-group">
-            <label>Subheadline</label>
-            <textarea 
-              v-model="texts.subheadline" 
-              placeholder="Descripción secundaria"
-              maxlength="100"
-              rows="2"
-            ></textarea>
-            <span class="char-count">{{ texts.subheadline?.length || 0 }}/100</span>
-          </div>
-
-          <div class="form-group">
-            <label>CTA (Llamada a la acción)</label>
-            <input 
-              type="text" 
-              v-model="texts.cta" 
-              placeholder="Ej: Descargar ahora"
-              maxlength="30"
+          <div v-else class="text-items-list">
+            <div 
+              v-for="(textItem, index) in textItems" 
+              :key="textItem.id"
+              class="text-item-card"
+              :class="{ active: selectedTextIndex === index }"
+              @click="selectedTextIndex = index"
             >
-            <span class="char-count">{{ texts.cta?.length || 0 }}/30</span>
+              <div class="text-item-header">
+                <div class="text-item-number">{{ index + 1 }}</div>
+                <input 
+                  type="text" 
+                  v-model="textItem.content" 
+                  @click.stop
+                  placeholder="Escribe tu texto..."
+                  class="text-item-input"
+                  maxlength="200"
+                >
+                <button 
+                  class="btn-delete-text" 
+                  @click.stop="removeText(index)"
+                  title="Eliminar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Controles del texto seleccionado -->
+              <div v-if="selectedTextIndex === index" class="text-item-controls">
+                <div class="form-group-inline">
+                  <label>Tamaño</label>
+                  <input 
+                    type="number" 
+                    v-model.number="textItem.fontSize" 
+                    @click.stop
+                    min="8" 
+                    max="200"
+                    class="input-small"
+                  >
+                </div>
+
+                <div class="form-group-inline">
+                  <label>Fuente</label>
+                  <select v-model="textItem.fontFamily" @click.stop class="select-small">
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Comic Sans MS">Comic Sans MS</option>
+                    <option value="Impact">Impact</option>
+                    <option value="Trebuchet MS">Trebuchet MS</option>
+                  </select>
+                </div>
+
+                <div class="form-group-inline">
+                  <label>Color</label>
+                  <input 
+                    type="color" 
+                    v-model="textItem.color" 
+                    @click.stop
+                    class="input-color-small"
+                  >
+                </div>
+
+                <div class="form-group-inline">
+                  <label>Estilo</label>
+                  <div class="text-style-buttons">
+                    <button 
+                      @click.stop="textItem.fontWeight = textItem.fontWeight === 'bold' ? 'normal' : 'bold'"
+                      :class="{ active: textItem.fontWeight === 'bold' }"
+                      class="btn-style"
+                      title="Negrita"
+                    >
+                      <strong>B</strong>
+                    </button>
+                    <button 
+                      @click.stop="textItem.fontStyle = textItem.fontStyle === 'italic' ? 'normal' : 'italic'"
+                      :class="{ active: textItem.fontStyle === 'italic' }"
+                      class="btn-style"
+                      title="Cursiva"
+                    >
+                      <em>I</em>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -914,6 +1000,12 @@ export default {
     const loadingDesigns = ref(false);
     const currentDesignId = ref(null); // ID del diseño actual si se está editando
     
+    // Mockups (imágenes prediseñadas compartidas)
+    const mockups = ref([]);
+    const mockupCategories = ref([]);
+    const mockupCategoryFilter = ref('');
+    const loadingMockups = ref(false);
+    
     // Nueva estructura: configuraciones por dispositivo
     const deviceConfigs = ref({});
     const currentDeviceKey = ref(null); // Dispositivo actualmente activo
@@ -935,13 +1027,10 @@ export default {
     
     const currentPageIndex = ref(0);
     
-
-
-    const texts = ref({
-      headline: '',
-      subheadline: '',
-      cta: '',
-    });
+    // Sistema de textos dinámico
+    const textItems = ref([]);
+    const selectedTextIndex = ref(null);
+    const textIdCounter = ref(1);
 
     const selectedLanguage = ref('es');
     const backgroundColor = ref('#6366f1');
@@ -1178,7 +1267,7 @@ export default {
             canvas_type: canvasOrientation.value,
             canvas_config: null,
             canvas_images: [],
-            texts: {},
+            text_items: [],
             thumbnail: null,
           }]
         };
@@ -1225,7 +1314,7 @@ export default {
       if (config.pages.length > 0) {
         const firstPage = config.pages[0];
         canvasImages.value = [...(firstPage.canvas_images || [])];
-        texts.value = firstPage.texts || { headline: '', subheadline: '', cta: '' };
+        textItems.value = firstPage.text_items || [];
         blankCanvasConfig.value = firstPage.canvas_config;
         
         // Sincronizar backgroundColor desde el config cargado
@@ -1403,9 +1492,10 @@ export default {
       currentDeviceKey.value = deviceKey;
       currentPageIndex.value = 0;
       
-      // Limpiar canvas e imágenes
+      // Limpiar canvas e imágenes y textos
       canvasImages.value = [];
-      texts.value = { headline: '', subheadline: '', cta: '' };
+      textItems.value = [];
+      selectedTextIndex.value = null;
       
       markAsChanged();
     };
@@ -1455,6 +1545,36 @@ export default {
       showTemplateModal.value = false;
     };
 
+    // Funciones para textos dinámicos
+    const addNewText = () => {
+      const newText = {
+        id: textIdCounter.value++,
+        content: '',
+        fontSize: 24,
+        fontFamily: 'Arial',
+        color: '#000000',
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        rotation: 0,
+        x: undefined,
+        y: undefined,
+      };
+      textItems.value.push(newText);
+      selectedTextIndex.value = textItems.value.length - 1;
+      markAsChanged();
+    };
+
+    const removeText = (index) => {
+      textItems.value.splice(index, 1);
+      if (selectedTextIndex.value >= textItems.value.length) {
+        selectedTextIndex.value = textItems.value.length - 1;
+      }
+      if (selectedTextIndex.value < 0) {
+        selectedTextIndex.value = null;
+      }
+      markAsChanged();
+    };
+
     const insertImageToCanvas = (image) => {
       // Insertar imagen en el canvas en el centro
       const newImage = {
@@ -1471,6 +1591,61 @@ export default {
       
       canvasImages.value.push(newImage);
       showNotification('Imagen insertada en el lienzo');
+    };
+
+    const insertMockupToCanvas = async (mockup) => {
+      try {
+        // Incrementar contador de uso en el backend
+        await axios.post(`/api/mockups/${mockup.id}/usage`);
+        
+        // Insertar mockup en el canvas
+        const newImage = {
+          id: Date.now(),
+          filename: mockup.filename,
+          url: mockup.url, // URL pública del mockup
+          x: 100,
+          y: 100,
+          width: mockup.width || 400,
+          height: mockup.height || 400,
+          rotation: 0,
+          zIndex: canvasImages.value.length
+        };
+        
+        canvasImages.value.push(newImage);
+        showNotification(`Mockup "${mockup.name}" insertado en el lienzo`);
+      } catch (error) {
+        console.error('Error al insertar mockup:', error);
+        showNotification('Error al insertar mockup', 'error');
+      }
+    };
+
+    const loadMockups = async () => {
+      try {
+        loadingMockups.value = true;
+        
+        const params = {};
+        if (mockupCategoryFilter.value) {
+          params.category = mockupCategoryFilter.value;
+        }
+        
+        const response = await axios.get('/api/mockups', { params });
+        mockups.value = response.data;
+        
+        loadingMockups.value = false;
+      } catch (error) {
+        console.error('Error al cargar mockups:', error);
+        showNotification('Error al cargar mockups', 'error');
+        loadingMockups.value = false;
+      }
+    };
+
+    const loadMockupCategories = async () => {
+      try {
+        const response = await axios.get('/api/mockups/categories');
+        mockupCategories.value = response.data;
+      } catch (error) {
+        console.error('Error al cargar categorías:', error);
+      }
     };
 
     const removeImage = (image) => {
@@ -1572,7 +1747,7 @@ export default {
           canvas: { width: 1200, height: 2688, background: '#ffffff' }
         },
         canvas_images: [],
-        texts: {},
+        text_items: [],
         thumbnail: null,
       };
       pages.value.push(newPage);
@@ -1590,7 +1765,7 @@ export default {
       const currentPage = pages.value[currentPageIndex.value];
       if (currentPage) {
         currentPage.canvas_images = [...canvasImages.value];
-        currentPage.texts = { ...texts.value };
+        currentPage.text_items = [...textItems.value];
         currentPage.canvas_config = blankCanvasConfig.value;
         currentPage.canvas_type = canvasMode.value.replace('blank-', '');
       }
@@ -1599,7 +1774,7 @@ export default {
       currentPageIndex.value = index;
       const newPage = pages.value[index];
       canvasImages.value = [...(newPage.canvas_images || [])];
-      texts.value = { ...newPage.texts };
+      textItems.value = [...(newPage.text_items || [])];
       blankCanvasConfig.value = newPage.canvas_config;
       canvasMode.value = `blank-${newPage.canvas_type}`;
     };
@@ -1679,7 +1854,7 @@ export default {
           const currentPage = pages.value[currentPageIndex.value];
           if (currentPage) {
             currentPage.canvas_images = [...canvasImages.value];
-            currentPage.texts = { ...texts.value };
+            currentPage.text_items = [...textItems.value];
             currentPage.canvas_config = blankCanvasConfig.value;
           }
         }
@@ -1711,7 +1886,7 @@ export default {
             width: img.width,
             height: img.height
           })),
-          texts: texts.value,
+          text_items: textItems.value,
           thumbnail: thumbnail
         };
 
@@ -1732,7 +1907,7 @@ export default {
         const currentPage = pages.value[currentPageIndex.value];
         if (currentPage) {
           currentPage.canvas_images = [...canvasImages.value];
-          currentPage.texts = { ...texts.value };
+          currentPage.text_items = [...textItems.value];
           currentPage.canvas_config = blankCanvasConfig.value;
         }
         
@@ -1765,7 +1940,7 @@ export default {
                 rotation: img.rotation || 0,
                 zIndex: img.zIndex
               })),
-              texts: page.texts || {},
+              text_items: page.text_items || [],
               thumbnail: page.thumbnail || null,
             };
             
@@ -1898,7 +2073,7 @@ export default {
                   ...img,
                   url: `/api/designs/${designId}/images/${img.filename}`
                 }));
-              texts.value = firstPage.texts || { headline: '', subheadline: '', cta: '' };
+              textItems.value = firstPage.text_items || [];
               blankCanvasConfig.value = firstPage.canvas_config;
               canvasMode.value = firstPage.canvas_type ? `blank-${firstPage.canvas_type}` : 'blank-vertical';
               
@@ -1930,7 +2105,7 @@ export default {
             }));
 
           // Cargar textos
-          texts.value = design.texts || { headline: '', subheadline: '', cta: '' };
+          textItems.value = design.text_items || [];
 
           // Intentar cargar páginas del diseño
           let legacyPages = [];
@@ -1955,7 +2130,7 @@ export default {
                 canvas_type: design.canvas_type,
                 canvas_config: design.canvas_config,
                 canvas_images: design.canvas_images || [],
-                texts: design.texts || {},
+                text_items: design.text_items || [],
                 thumbnail: design.thumbnail_path || null,
               }];
             }
@@ -1968,7 +2143,7 @@ export default {
               canvas_type: design.canvas_type,
               canvas_config: design.canvas_config,
               canvas_images: design.canvas_images || [],
-              texts: design.texts || {},
+              text_items: design.text_items || [],
               thumbnail: design.thumbnail_path || null,
             }];
           }
@@ -1997,7 +2172,7 @@ export default {
             currentPageIndex.value = 0;
             const firstPage = legacyPages[0];
             canvasImages.value = firstPage.canvas_images || [];
-            texts.value = firstPage.texts || { headline: '', subheadline: '', cta: '' };
+            textItems.value = firstPage.text_items || [];
             blankCanvasConfig.value = firstPage.canvas_config;
             
             // Sincronizar backgroundColor desde el config cargado
@@ -2103,14 +2278,24 @@ export default {
 
       showNotification('Generando textos con IA...', 'info');
 
-      // Simular generación de IA
+      // Simular generación de IA - Agregar nuevo texto con contenido generado
       setTimeout(() => {
-        texts.value = {
-          headline: 'Tu nueva app favorita',
-          subheadline: 'Simplifica tu vida con nuestra solución innovadora',
-          cta: 'Descargar gratis',
+        const generatedText = {
+          id: textIdCounter.value++,
+          content: 'Tu nueva app favorita',
+          fontSize: 32,
+          fontFamily: 'Arial',
+          color: '#000000',
+          fontWeight: 'bold',
+          fontStyle: 'normal',
+          rotation: 0,
+          x: undefined,
+          y: undefined,
         };
-        showNotification('Textos generados');
+        textItems.value.push(generatedText);
+        selectedTextIndex.value = textItems.value.length - 1;
+        markAsChanged();
+        showNotification('Texto generado con IA');
       }, 1500);
     };
 
@@ -2231,7 +2416,7 @@ export default {
     });
 
     // Watchers para detectar cambios
-    watch([texts, canvasImages, blankCanvasConfig, backgroundColor], () => {
+    watch([textItems, canvasImages, blankCanvasConfig, backgroundColor], () => {
       markAsChanged();
     }, { deep: true });
 
@@ -2241,6 +2426,8 @@ export default {
 
     onMounted(async () => {
       loadTemplates();
+      loadMockups();
+      loadMockupCategories();
       
       // Verificar si hay un diseño en la URL
       const designIdFromUrl = getDesignIdFromUrl();
@@ -2307,7 +2494,12 @@ export default {
       templates,
       selectedTemplate,
       templateFilter,
-      texts,
+      mockups,
+      mockupCategories,
+      mockupCategoryFilter,
+      loadingMockups,
+      textItems,
+      selectedTextIndex,
       selectedLanguage,
       backgroundColor,
       exportFormat,
@@ -2343,7 +2535,12 @@ export default {
       createBlankCanvas,
       openTemplateModal,
       closeTemplateModal,
+      addNewText,
+      removeText,
       insertImageToCanvas,
+      insertMockupToCanvas,
+      loadMockups,
+      loadMockupCategories,
       removeImage,
       selectTemplate,
       handleUpload,
@@ -3045,6 +3242,27 @@ export default {
 
 .gallery-delete:hover {
   background: #dc2626;
+}
+
+.mockup-name {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 4px 6px;
+  background: rgba(15, 23, 42, 0.9);
+  color: var(--text-primary);
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.gallery-item:hover .mockup-name {
+  opacity: 1;
 }
 
 /* ========================================
@@ -3759,5 +3977,204 @@ export default {
 
 .mt-2 {
   margin-top: 0.5rem;
+}
+
+/* Estilos para textos dinámicos */
+.text-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.text-item-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 0.875rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.text-item-card:hover {
+  border-color: var(--primary-light);
+}
+
+.text-item-card.active {
+  border-color: var(--primary);
+  background: linear-gradient(to bottom, var(--surface), var(--primary-light) / 0.05);
+}
+
+.text-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.text-item-number {
+  background: var(--primary);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.text-item-input {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-surface-light);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.text-item-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-surface-light);
+}
+
+.text-item-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.btn-delete-text {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--danger);
+  color: white;
+  border: none;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-delete-text:hover {
+  background: #dc2626;
+  transform: scale(1.05);
+}
+
+.text-item-controls {
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-group-inline {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  width: 100%;
+}
+
+.form-group-inline label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  min-width: 50px;
+  max-width: 50px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.input-small {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-surface-light);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.input-small:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-surface-light);
+}
+
+.select-small {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--bg-surface-light);
+  color: var(--text-primary);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.select-small:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.select-small option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 0.5rem;
+}
+
+.input-color-small {
+  width: 40px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.text-style-buttons {
+  display: flex;
+  gap: 0.625rem;
+}
+
+.btn-style {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-style:hover {
+  background: var(--bg-surface-light);
+  border-color: var(--text-secondary);
+}
+
+.btn-style.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 </style>
